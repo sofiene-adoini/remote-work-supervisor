@@ -1,0 +1,45 @@
+.layout-shell {
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 268px;
+  border-right: 1px solid var(--rws-border);
+  background: #fff;
+}
+
+.brand {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-weight: 700;
+  color: var(--rws-primary);
+  border-bottom: 1px solid var(--rws-border);
+}
+
+.active-link {
+  background-color: #e8f1fb;
+  border-radius: 10px;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.title {
+  margin-left: 0.5rem;
+  font-weight: 600;
+}
+
+.page-content {
+  padding: 1rem;
+}
+
+@media (min-width: 960px) {
+  .page-content {
+    padding: 1.5rem;
+  }
+}

@@ -4,7 +4,10 @@ dist
 
 build
 
-.env
+*.env
+!.env.example
+!**/.env.example
+
 
 coverage
 
@@ -17,3 +20,4 @@ coverage
 .DS_Store
 
 Thumbs.db
+remote-work-supervisor-plan (1).md

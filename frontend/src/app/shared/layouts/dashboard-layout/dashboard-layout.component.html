@@ -1,0 +1,38 @@
+<mat-sidenav-container class="layout-shell">
+  <mat-sidenav
+    #sidenav
+    class="sidebar"
+    [mode]="sidenavMode()"
+    [opened]="!isMobile()"
+    [fixedInViewport]="isMobile()"
+  >
+    <div class="brand">Remote Work Supervisor</div>
+    <mat-nav-list>
+      @for (item of navItems; track item.path) {
+        <a
+          mat-list-item
+          [routerLink]="item.path"
+          routerLinkActive="active-link"
+          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+          (click)="isMobile() && sidenav.close()"
+        >
+          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <span matListItemTitle>{{ item.label }}</span>
+        </a>
+      }
+    </mat-nav-list>
+  </mat-sidenav>
+
+  <mat-sidenav-content>
+    <mat-toolbar class="topbar" color="primary">
+      <button mat-icon-button type="button" (click)="sidenav.toggle()" aria-label="Toggle sidebar">
+        <mat-icon>menu</mat-icon>
+      </button>
+      <span class="title">Enterprise Dashboard</span>
+    </mat-toolbar>
+
+    <main class="page-content">
+      <router-outlet></router-outlet>
+    </main>
+  </mat-sidenav-content>
+</mat-sidenav-container>
