@@ -1,4 +1,5 @@
 @use '@angular/material' as mat;
+@use 'styles/design-tokens';
 
 @include mat.core();
 
@@ -15,15 +16,6 @@ $rws-theme: mat.define-theme(
 	)
 );
 
-:root {
-	--rws-primary: #1976d2;
-	--rws-bg: #f5f7fa;
-	--rws-card: #ffffff;
-	--rws-radius: 12px;
-	--rws-text: #1c2733;
-	--rws-border: #d8e1eb;
-}
-
 html,
 body {
 	height: 100%;
@@ -33,10 +25,15 @@ body {
 	margin: 0;
 	color: var(--rws-text);
 	background-color: var(--rws-bg);
-	font-family: Roboto, 'Helvetica Neue', sans-serif;
+	font-family: var(--rws-font-sans);
 	@include mat.theme($rws-theme);
 }
 
 * {
 	box-sizing: border-box;
+}
+
+// Monospace accents (user-facing codes, tokens, etc.) — opt in via .rws-mono.
+.rws-mono {
+	font-family: var(--rws-font-mono);
 }

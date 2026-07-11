@@ -1,0 +1,52 @@
+// Design tokens for Remote Work Supervisor.
+//
+// This is the single source of truth for the app's palette and type scale, expressed
+// as CSS custom properties so they cascade globally AND can be `@use`d in component
+// SCSS that needs Sass-level access. Import once at the top of `styles.scss` via:
+//
+//   @use 'path/to/_design-tokens';
+//
+// then reference via `var(--rws-*)` in component CSS variables or directly via these
+// SCSS values inside component SCSS where the pipeline allows.
+
+// ── Palette ───────────────────────────────────────────────────────────────────
+$rws-bg:            #f7f8fa;
+$rws-card:          #ffffff;
+$rws-primary:       #2b3a67;
+$rws-accent:        #1fb6a6;
+$rws-accent-strong: #167d72; // darker variant used for button text/bg to meet WCAG AA
+$rws-text:          #1a1d23;
+$rws-text-muted:    #6b7280;
+$rws-border:        #d6dce5;
+$rws-error:         #d64545;
+$rws-success:       #2e9e6c;
+$rws-focus-ring:    rgb(31 182 166 / 22%);
+$rws-radius:        8px;
+
+// ── Typography ─────────────────────────────────────────────────────────────────
+$rws-font-sans: Inter, Roboto, 'Helvetica Neue', Arial, sans-serif;
+$rws-font-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+
+// Print only the CSS custom property map (no side effects) — keeps styles.scss clean
+// and lets any component reference the variables directly:
+//
+//   color: var(--rws-primary);
+//   font-family: var(--rws-font-mono);
+//
+:root {
+  --rws-bg:            #{$rws-bg};
+  --rws-card:          #{$rws-card};
+  --rws-primary:       #{$rws-primary};
+  --rws-accent:        #{$rws-accent};
+  --rws-accent-strong: #{$rws-accent-strong};
+  --rws-text:          #{$rws-text};
+  --rws-text-muted:    #{$rws-text-muted};
+  --rws-border:        #{$rws-border};
+  --rws-error:         #{$rws-error};
+  --rws-success:       #{$rws-success};
+  --rws-focus-ring:    #{$rws-focus-ring};
+  --rws-radius:        #{$rws-radius};
+
+  --rws-font-sans: #{$rws-font-sans};
+  --rws-font-mono: #{$rws-font-mono};
+}
