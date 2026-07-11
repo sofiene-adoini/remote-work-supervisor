@@ -1,19 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { AutofocusDirective } from '../../../shared/directives/autofocus.directive';
 
 @Component({
-  selector: 'app-login-page',
+  selector: 'app-forgot-password-page',
   imports: [CommonModule, ReactiveFormsModule, RouterLink, AutofocusDirective],
   template: `
     <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="auth-copy">
-        <h1>Sign in</h1>
-        <p>Access your Remote Work Supervisor dashboard.</p>
+        <h1>Reset password</h1>
+        <p>Enter your work email and we will send a reset link.</p>
       </div>
 
       <div class="auth-field">
@@ -26,24 +26,14 @@ import { AutofocusDirective } from '../../../shared/directives/autofocus.directi
           aria-describedby="email-error"
           appAutofocus
         />
-        @if (showError('email')) {
+        @if (showEmailError()) {
           <p id="email-error" class="auth-error" role="alert">Enter a valid work email.</p>
         }
       </div>
 
-      <div class="auth-field">
-        <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          aria-describedby="password-error"
-        />
-        @if (showError('password')) {
-          <p id="password-error" class="auth-error" role="alert">Enter your password.</p>
-        }
-      </div>
+      @if (status) {
+        <p class="auth-status" role="status">{{ status }}</p>
+      }
 
       @if (submitError) {
         <p class="auth-error" role="alert">{{ submitError }}</p>
@@ -54,29 +44,28 @@ import { AutofocusDirective } from '../../../shared/directives/autofocus.directi
           @if (loading) {
             <span class="auth-spinner" aria-hidden="true"></span>
           }
-          Sign in
+          Send reset link
         </button>
-        <a class="auth-link" routerLink="/forgot-password">Forgot password?</a>
+        <a class="auth-link" routerLink="/login">Back to sign in</a>
       </div>
     </form>
   `,
   styleUrl: '../styles/auth-pages.scss',
 })
-export class LoginPageComponent {
+export class ForgotPasswordPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   protected loading = false;
+  protected status = '';
   protected submitError = '';
 
   protected readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required]],
   });
 
-  protected showError(controlName: 'email' | 'password'): boolean {
-    const control = this.form.controls[controlName];
+  protected showEmailError(): boolean {
+    const control = this.form.controls.email;
     return control.invalid && (control.dirty || control.touched);
   }
 
@@ -88,16 +77,18 @@ export class LoginPageComponent {
     }
 
     this.loading = true;
+    this.status = '';
     this.submitError = '';
 
-    const { email, password } = this.form.getRawValue();
     this.auth
-      .login(email, password)
+      .forgotPassword(this.form.controls.email.value)
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
-        next: (user) => void this.router.navigateByUrl(this.auth.redirectPathFor(user)),
+        next: () => {
+          this.status = 'If that email exists, a reset link has been sent.';
+        },
         error: () => {
-          this.submitError = "That email or password isn't right. Try again.";
+          this.submitError = 'The reset link could not be sent. Try again.';
         },
       });
   }

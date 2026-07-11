@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(fix-strapi-cors-and-port-conflicts)",
+      "Bash(netstat *)",
+      "Bash(findstr *)",
+      "Bash(taskkill *)",
+      "Bash(npm run *)",
+      "Bash(type *)",
+      "Bash(ng *)",
+      "Bash(start *)",
+      "Bash(timeout *)",
+      "Bash(curl *)"
+    ]
+  },
+  "$version": 4
+}

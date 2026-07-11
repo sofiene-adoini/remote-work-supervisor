@@ -1,12 +1,13 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { roleGuard } from './core/guards/role.guard';
 import { AuthLayoutComponent } from './shared/layouts/auth-layout/auth-layout.component';
 import { DashboardLayoutComponent } from './shared/layouts/dashboard-layout/dashboard-layout.component';
 
 export const routes: Routes = [
 	{
-		path: 'login',
+		path: '',
 		component: AuthLayoutComponent,
 		canActivate: [guestGuard],
 		children: [
@@ -45,6 +46,8 @@ export const routes: Routes = [
 			},
 			{
 				path: 'hr',
+				canActivate: [roleGuard],
+				data: { roles: ['HR', 'Admin'] },
 				loadChildren: () => import('./features/hr/hr.routes').then((m) => m.HR_ROUTES),
 			},
 			{

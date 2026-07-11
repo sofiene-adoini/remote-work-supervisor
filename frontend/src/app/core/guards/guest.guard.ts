@@ -1,14 +1,17 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthenticationService } from '../services/authentication.service';
+import { map } from 'rxjs';
+import { AuthService } from '../../features/auth/services/auth.service';
 
 export const guestGuard: CanActivateFn = () => {
-  const authService = inject(AuthenticationService);
+  const authService = inject(AuthService);
   const router = inject(Router);
 
   if (!authService.isAuthenticated()) {
-    return true;
+    return authService.restoreSession().pipe(
+      map((user) => (user ? router.createUrlTree([authService.redirectPathFor(user)]) : true)),
+    );
   }
 
-  return router.createUrlTree(['/dashboard']);
+  return router.createUrlTree([authService.redirectPathFor()]);
 };

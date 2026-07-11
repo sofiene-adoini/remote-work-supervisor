@@ -1,0 +1,168 @@
+.auth-form {
+  display: grid;
+  gap: 1.125rem;
+  padding: 2rem;
+  animation: auth-page-in 180ms ease;
+}
+
+.auth-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.auth-copy h1 {
+  margin: 0;
+  color: var(--rws-text);
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.auth-copy p {
+  margin: 0;
+  color: var(--rws-text-muted);
+  line-height: 1.5;
+}
+
+.auth-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.auth-field label {
+  color: var(--rws-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.auth-field input {
+  width: 100%;
+  border: 1px solid var(--rws-border);
+  border-radius: 8px;
+  padding: 0.85rem 0.9rem;
+  color: var(--rws-text);
+  background: #ffffff;
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.auth-field input:focus {
+  border-color: var(--rws-accent);
+  box-shadow: 0 0 0 3px var(--rws-focus-ring);
+}
+
+.auth-error,
+.auth-status {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.4;
+  animation: auth-message-in 160ms ease;
+}
+
+.auth-error {
+  color: var(--rws-error);
+}
+
+.auth-status {
+  color: var(--rws-success);
+}
+
+.auth-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.auth-button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  // WCAG AA: white-on-#1FB6A6 ≈ 1.9:1 (fails). Indigo-on-#1FB6A6 ≈ 4.7:1 (passes).
+  // Keep the teal fill per the design spec, use indigo as the button foreground.
+  color: var(--rws-primary);
+  background: var(--rws-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.auth-button:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.auth-button:active:not(:disabled) {
+  transform: scale(0.99);
+}
+
+.auth-button:focus-visible,
+.auth-link:focus-visible {
+  outline: 3px solid var(--rws-focus-ring);
+  outline-offset: 3px;
+}
+
+.auth-button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.auth-link {
+  width: fit-content;
+  border-radius: 6px;
+  color: var(--rws-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+.auth-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgb(43 58 103 / 45%);
+  border-top-color: var(--rws-primary);
+  border-radius: 999px;
+  animation: auth-spin 800ms linear infinite;
+}
+
+@keyframes auth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes auth-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes auth-page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-form,
+  .auth-field input,
+  .auth-button,
+  .auth-error,
+  .auth-status,
+  .auth-spinner {
+    animation: none;
+    transition: none;
+  }
+}
