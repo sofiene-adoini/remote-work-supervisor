@@ -8,6 +8,18 @@ export const EMPLOYEE_ROUTES: Routes = [
   },
   {
     path: 'dashboard',
-    loadComponent: () => import('./pages/employee-page.component').then((m) => m.EmployeePageComponent),
+    loadComponent: () => import('./pages/employee-dashboard.component').then((m) => m.EmployeeDashboardComponent),
+  },
+  {
+    path: 'projects',
+    loadComponent: () => import('./pages/employee-projects.component').then((m) => m.EmployeeProjectsComponent),
+  },
+  {
+    path: 'alerts',
+    loadComponent: () => import('./pages/employee-alerts.component').then((m) => m.EmployeeAlertsComponent),
+  },
+  {
+    path: 'overtime',
+    loadComponent: () => import('./pages/employee-overtime.component').then((m) => m.EmployeeOvertimeComponent),
   },
 ];

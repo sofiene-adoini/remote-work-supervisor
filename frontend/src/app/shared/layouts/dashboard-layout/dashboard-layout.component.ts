@@ -1,18 +1,29 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal, Type } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { DatePipe, NgComponentOutlet } from '@angular/common';
 import { map } from 'rxjs';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatListModule } from '@angular/material/list';
+import { AuthService } from '../../../features/auth/services/auth.service';
+import {
+  LucideLayoutDashboard,
+  LucideUsers,
+  LucideFolderOpen,
+  LucideTriangleAlert,
+  LucideChartBar,
+  LucideLogOut,
+  LucideBell,
+  LucideMenu,
+  LucideX,
+  LucideChevronDown,
+  LucideClock,
+} from '@lucide/angular';
 
 interface NavItem {
   label: string;
-  icon: string;
+  icon: Type<any>;
   path: string;
+  roles?: string[];
 }
 
 @Component({
@@ -21,31 +32,99 @@ interface NavItem {
     RouterOutlet,
     RouterLink,
     RouterLinkActive,
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSidenavModule,
-    MatListModule,
+    NgComponentOutlet,
+    LucideLayoutDashboard,
+    LucideUsers,
+    LucideFolderOpen,
+    LucideTriangleAlert,
+    LucideChartBar,
+    LucideLogOut,
+    LucideBell,
+    LucideMenu,
+    LucideX,
+    LucideChevronDown,
+    LucideClock,
+    DatePipe,
   ],
   templateUrl: './dashboard-layout.component.html',
   styleUrl: './dashboard-layout.component.scss',
 })
 export class DashboardLayoutComponent {
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  protected readonly currentUser = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
+  protected readonly userRole = computed(() => this.currentUser()?.role?.name ?? 'Employee');
 
   protected readonly isMobile = toSignal(
-    this.breakpointObserver.observe('(max-width: 959px)').pipe(map((state) => state.matches)),
-    { initialValue: false }
+    this.breakpointObserver.observe('(max-width: 1023px)').pipe(map((s) => s.matches)),
+    { initialValue: false },
   );
 
-  protected readonly sidenavMode = computed(() => (this.isMobile() ? 'over' : 'side'));
+  protected readonly sidebarCollapsed = signal(false);
+  protected readonly notificationsOpen = signal(false);
+  protected readonly userMenuOpen = signal(false);
+  protected readonly currentTime = signal(new Date());
 
-  protected readonly navItems: NavItem[] = [
-    { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-    { label: 'Projects', icon: 'workspaces', path: '/projects' },
-    { label: 'Reports', icon: 'analytics', path: '/reports' },
-    { label: 'Employee', icon: 'badge', path: '/employee' },
-    { label: 'HR', icon: 'groups', path: '/hr' },
-    { label: 'Settings', icon: 'settings', path: '/settings' },
+  protected readonly sidebarWidth = computed(() => (this.sidebarCollapsed() ? '64px' : '268px'));
+
+  protected readonly allNavItems: NavItem[] = [
+    { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/employee/dashboard', roles: ['Employee', 'Manager'] },
+    { label: 'My Time', icon: LucideClock, path: '/employee/time', roles: ['Employee', 'Manager'] },
+    { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee', 'Manager'] },
+    { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee', 'Manager'] },
+    { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
+    { label: 'Members', icon: LucideUsers, path: '/hr/members', roles: ['HR', 'Admin'] },
+    { label: 'Teams', icon: LucideFolderOpen, path: '/hr/teams', roles: ['HR', 'Admin'] },
+    { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },
+    { label: 'Alerts', icon: LucideTriangleAlert, path: '/hr/alerts', roles: ['HR', 'Admin'] },
   ];
+
+  protected readonly filteredNavItems = computed(() => {
+    const role = this.userRole();
+    return this.allNavItems.filter((item) => !item.roles || item.roles.includes(role));
+  });
+
+  protected readonly pageTitle = computed(() => {
+    const url = this.router.url;
+    const match = this.allNavItems.find((i) => url.startsWith(i.path));
+    return match?.label ?? 'Dashboard';
+  });
+
+  protected readonly isEmployee = computed(() => {
+    const role = this.userRole();
+    return role === 'Employee' || role === 'Manager';
+  });
+
+  constructor() {
+    const id = setInterval(() => this.currentTime.set(new Date()), 1000);
+  }
+
+  protected toggleSidebar(): void {
+    this.sidebarCollapsed.update((v) => !v);
+  }
+
+  protected closeSidebar(): void {
+    if (this.isMobile()) {
+      this.sidebarCollapsed.set(true);
+    }
+  }
+
+  protected toggleNotifications(): void {
+    this.notificationsOpen.update((v) => !v);
+  }
+
+  protected toggleUserMenu(): void {
+    this.userMenuOpen.update((v) => !v);
+  }
+
+  protected closeUserMenu(): void {
+    this.userMenuOpen.set(false);
+  }
+
+  protected logout(): void {
+    this.auth.logout().subscribe();
+  }
+
 }
