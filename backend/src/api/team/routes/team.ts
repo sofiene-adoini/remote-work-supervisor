@@ -1,3 +1,28 @@
-import { factories } from '@strapi/strapi';
-
-export default factories.createCoreRouter('api::team.team');
+export default {
+  routes: [
+    {
+      method: 'GET',
+      path: '/teams',
+      handler: 'team.listAll',
+      config: {
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/teams/:teamId/members',
+      handler: 'team.members',
+      config: {
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/teams/all-members',
+      handler: 'team.allMembers',
+      config: {
+        policies: [],
+      },
+    },
+  ],
+};

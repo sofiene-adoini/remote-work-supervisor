@@ -23,26 +23,8 @@ export const routes: Routes = [
 		canActivate: [authGuard],
 		children: [
 			{
-				path: '',
-				pathMatch: 'full',
-				redirectTo: 'dashboard',
-			},
-			{
-				path: 'dashboard',
-				loadChildren: () =>
-					import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
-			},
-			{
-				path: 'projects',
-				loadChildren: () => import('./features/projects/projects.routes').then((m) => m.PROJECTS_ROUTES),
-			},
-			{
-				path: 'reports',
-				loadChildren: () => import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
-			},
-			{
-				path: 'settings',
-				loadChildren: () => import('./features/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
+				path: 'employee',
+				loadChildren: () => import('./features/employee/employee.routes').then((m) => m.EMPLOYEE_ROUTES),
 			},
 			{
 				path: 'hr',
@@ -51,8 +33,9 @@ export const routes: Routes = [
 				loadChildren: () => import('./features/hr/hr.routes').then((m) => m.HR_ROUTES),
 			},
 			{
-				path: 'employee',
-				loadChildren: () => import('./features/employee/employee.routes').then((m) => m.EMPLOYEE_ROUTES),
+				path: 'dashboard',
+				loadChildren: () =>
+					import('./features/dashboard/dashboard.routes').then((m) => m.DASHBOARD_ROUTES),
 			},
 		],
 	},

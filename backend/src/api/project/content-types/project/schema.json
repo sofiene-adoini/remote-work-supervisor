@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "projects",
+  "info": {
+    "singularName": "project",
+    "pluralName": "projects",
+    "displayName": "Project"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["active", "archived"],
+      "default": "active",
+      "required": true
+    },
+    "users": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "projects"
+    },
+    "timeEntries": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::time-entry.time-entry",
+      "mappedBy": "project"
+    }
+  }
+}

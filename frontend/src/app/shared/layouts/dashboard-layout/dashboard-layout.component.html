@@ -1,38 +1,140 @@
-<mat-sidenav-container class="layout-shell">
-  <mat-sidenav
-    #sidenav
+<div class="layout-shell">
+  <!-- Mobile overlay -->
+  @if (isMobile() && !sidebarCollapsed()) {
+    <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
+  }
+
+  <!-- Sidebar -->
+  <aside
     class="sidebar"
-    [mode]="sidenavMode()"
-    [opened]="!isMobile()"
-    [fixedInViewport]="isMobile()"
+    [style.width]="sidebarWidth()"
+    [class.collapsed]="sidebarCollapsed()"
+    [class.mobile-open]="isMobile() && !sidebarCollapsed()"
   >
-    <div class="brand">Remote Work Supervisor</div>
-    <mat-nav-list>
-      @for (item of navItems; track item.path) {
-        <a
-          mat-list-item
-          [routerLink]="item.path"
-          routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
-          (click)="isMobile() && sidenav.close()"
-        >
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
-          <span matListItemTitle>{{ item.label }}</span>
-        </a>
-      }
-    </mat-nav-list>
-  </mat-sidenav>
-
-  <mat-sidenav-content>
-    <mat-toolbar class="topbar" color="primary">
-      <button mat-icon-button type="button" (click)="sidenav.toggle()" aria-label="Toggle sidebar">
-        <mat-icon>menu</mat-icon>
+    <div class="sidebar-header">
+      <div class="brand" [class.collapsed]="sidebarCollapsed()">
+        <svg lucideLayoutDashboard class="brand-icon" aria-hidden="true"></svg>
+        @if (!sidebarCollapsed()) {
+          <span class="brand-text">Remote Work Supervisor</span>
+        }
+      </div>
+      <button class="collapse-toggle" type="button" (click)="toggleSidebar()"
+        [attr.aria-label]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'">
+        @if (sidebarCollapsed()) {
+          <svg lucideMenu class="icon-sm" aria-hidden="true"></svg>
+        } @else {
+          <svg lucideX class="icon-sm" aria-hidden="true"></svg>
+        }
       </button>
-      <span class="title">Enterprise Dashboard</span>
-    </mat-toolbar>
+    </div>
 
+    <nav class="sidebar-nav" aria-label="Main navigation">
+      <ul class="nav-list" role="list">
+        @for (item of filteredNavItems(); track item.path) {
+          <li class="nav-item">
+            <a class="nav-link" [routerLink]="item.path" routerLinkActive="active"
+              [routerLinkActiveOptions]="{ exact: true }" (click)="closeSidebar()">
+              <ng-container [ngComponentOutlet]="item.icon" class="nav-icon"></ng-container>
+              @if (!sidebarCollapsed()) {
+                <span class="nav-label">{{ item.label }}</span>
+              }
+            </a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    @if (!sidebarCollapsed()) {
+      <div class="sidebar-footer">
+        <div class="role-badge">{{ userRole() }}</div>
+      </div>
+    }
+  </aside>
+
+  <!-- Main content -->
+  <div class="main-wrapper">
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        @if (isMobile()) {
+          <button class="topbar-btn" type="button" (click)="toggleSidebar()" aria-label="Toggle menu">
+            <svg lucideMenu class="icon-md" aria-hidden="true"></svg>
+          </button>
+        }
+        <h1 class="page-title">{{ pageTitle() }}</h1>
+      </div>
+
+      <div class="topbar-right">
+        @if (isEmployee()) {
+          <div class="status-pill status-active">
+            <span class="status-dot"></span>
+            <span class="status-label">Active</span>
+            <span class="status-time">{{ currentTime() | date:'shortTime' }}</span>
+          </div>
+        }
+
+        <button class="topbar-btn" type="button" (click)="toggleNotifications()" aria-label="Notifications">
+          <svg lucideBell class="icon-md" aria-hidden="true"></svg>
+          <span class="badge-dot"></span>
+        </button>
+
+        <div class="user-menu-wrapper">
+          <button class="user-trigger" type="button" (click)="toggleUserMenu()" (blur)="closeUserMenu()" aria-label="User menu">
+            <div class="avatar">
+              <span class="avatar-text">{{ currentUser()?.fullName?.charAt(0) ?? 'U' }}</span>
+            </div>
+            @if (!isMobile()) {
+              <span class="user-name">{{ currentUser()?.fullName ?? 'User' }}</span>
+              <svg lucideChevronDown class="icon-xs" aria-hidden="true"></svg>
+            }
+          </button>
+
+          @if (userMenuOpen()) {
+            <div class="dropdown-panel">
+              <div class="dropdown-user">
+                <div class="avatar avatar-lg">
+                  <span class="avatar-text">{{ currentUser()?.fullName?.charAt(0) ?? 'U' }}</span>
+                </div>
+                <div class="dropdown-user-info">
+                  <span class="dropdown-name">{{ currentUser()?.fullName ?? 'User' }}</span>
+                  <span class="dropdown-email">{{ currentUser()?.email }}</span>
+                  <span class="dropdown-role">{{ userRole() }}</span>
+                </div>
+              </div>
+              <hr class="dropdown-divider">
+              <button class="dropdown-item" type="button" (mousedown)="logout()">
+                <svg lucideLogOut class="icon-sm" aria-hidden="true"></svg>
+                <span>Log out</span>
+              </button>
+            </div>
+          }
+        </div>
+      </div>
+    </header>
+
+    <!-- Page content -->
     <main class="page-content">
       <router-outlet></router-outlet>
     </main>
-  </mat-sidenav-content>
-</mat-sidenav-container>
+  </div>
+
+  <!-- Notification panel -->
+  @if (notificationsOpen()) {
+    <div class="notif-overlay" (click)="toggleNotifications()"></div>
+    <aside class="notif-panel">
+      <div class="notif-header">
+        <h2 class="notif-title">Notifications</h2>
+        <button class="topbar-btn" type="button" (click)="toggleNotifications()" aria-label="Close">
+          <svg lucideX class="icon-md" aria-hidden="true"></svg>
+        </button>
+      </div>
+      <div class="notif-body">
+        <div class="notif-empty">
+          <svg lucideBell class="notif-empty-icon" aria-hidden="true"></svg>
+          <p class="notif-empty-text">No notifications yet</p>
+          <p class="notif-empty-sub">You're all caught up!</p>
+        </div>
+      </div>
+    </aside>
+  }
+</div>

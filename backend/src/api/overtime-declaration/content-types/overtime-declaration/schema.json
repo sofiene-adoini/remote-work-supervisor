@@ -1,0 +1,40 @@
+{
+  "kind": "collectionType",
+  "collectionName": "overtime_declarations",
+  "info": {
+    "singularName": "overtime-declaration",
+    "pluralName": "overtime-declarations",
+    "displayName": "Overtime Declaration"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "hours": {
+      "type": "decimal",
+      "required": true,
+      "min": 0.25,
+      "max": 24
+    },
+    "reason": {
+      "type": "text",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pending", "approved", "rejected"],
+      "default": "pending",
+      "required": true
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "overtimeDeclarations"
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "kind": "collectionType",
+  "collectionName": "time_entries",
+  "info": {
+    "singularName": "time-entry",
+    "pluralName": "time-entries",
+    "displayName": "Time Entry"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "hours": {
+      "type": "decimal",
+      "required": true,
+      "min": 0.25,
+      "max": 24
+    },
+    "description": {
+      "type": "text"
+    },
+    "project": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::project.project",
+      "inversedBy": "timeEntries"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "timeEntries"
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "kind": "collectionType",
+  "collectionName": "alerts",
+  "info": {
+    "singularName": "alert",
+    "pluralName": "alerts",
+    "displayName": "Alert"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "type": {
+      "type": "string",
+      "required": true
+    },
+    "severity": {
+      "type": "enumeration",
+      "enum": ["info", "warning", "error", "success"],
+      "default": "info",
+      "required": true
+    },
+    "message": {
+      "type": "text",
+      "required": true
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "alerts"
+    }
+  }
+}

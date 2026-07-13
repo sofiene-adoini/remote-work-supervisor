@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "sessions",
+  "info": {
+    "singularName": "session",
+    "pluralName": "sessions",
+    "displayName": "Session"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "clockIn": {
+      "type": "datetime",
+      "required": true
+    },
+    "clockOut": {
+      "type": "datetime"
+    },
+    "breakStart": {
+      "type": "datetime"
+    },
+    "breakEnd": {
+      "type": "datetime"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["active", "break", "completed"],
+      "default": "active",
+      "required": true
+    },
+    "totalBreakMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "sessions"
+    }
+  }
+}

@@ -63,6 +63,41 @@ export default (plugin: StrapiPlugin) => {
     default: true,
   };
 
+  ///////
+ plugin.contentTypes.user.schema.attributes.sessions = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::session.session',
+  mappedBy: 'user',
+};
+
+plugin.contentTypes.user.schema.attributes.alerts = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::alert.alert',
+  mappedBy: 'user',
+};
+
+plugin.contentTypes.user.schema.attributes.overtimeDeclarations = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::overtime-declaration.overtime-declaration',
+  mappedBy: 'user',
+};
+
+plugin.contentTypes.user.schema.attributes.timeEntries = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::time-entry.time-entry',
+  mappedBy: 'user',
+};
+
+plugin.contentTypes.user.schema.attributes.projects = {
+  type: 'relation',
+  relation: 'manyToMany',
+  target: 'api::project.project',
+  mappedBy: 'users',
+};
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';

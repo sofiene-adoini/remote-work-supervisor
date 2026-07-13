@@ -1,0 +1,13 @@
+{
+  "kind": "singleType",
+  "collectionName": "team_stats",
+  "info": {
+    "singularName": "team-stats",
+    "pluralName": "team-statistics",
+    "displayName": "Team Stats"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {}
+}

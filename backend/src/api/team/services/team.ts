@@ -1,3 +1,5 @@
-import { factories } from '@strapi/strapi';
+import teamController from '../controllers/team';
 
-export default factories.createCoreService('api::team.team');
+export default {
+  ...teamController,
+};
