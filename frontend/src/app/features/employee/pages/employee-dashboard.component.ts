@@ -297,13 +297,15 @@ import { Session, Alert, Project } from '../models/employee.models';
       border: 1px solid var(--rws-border);
       background: var(--rws-bg);
       cursor: pointer;
-      transition: border-color 150ms ease, box-shadow 150ms ease;
+      transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
       text-decoration: none;
       position: relative;
+      will-change: transform;
 
       &:hover {
         border-color: var(--rws-accent);
         box-shadow: 0 0 0 1px var(--rws-accent);
+        transform: translateY(-1px);
       }
     }
 
@@ -326,7 +328,12 @@ import { Session, Alert, Project } from '../models/employee.models';
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        transform: none !important;
+        will-change: auto !important;
+      }
     }
   `],
 })

@@ -124,7 +124,7 @@ export class DashboardLayoutComponent {
   }
 
   protected logout(): void {
+    this.userMenuOpen.set(false);
     this.auth.logout().subscribe();
   }
-
 }

@@ -432,7 +432,10 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
       border: none;
       border-radius: var(--rws-radius);
       cursor: pointer;
-      transition: background-color 150ms ease;
+      transition: background-color 150ms ease, transform 100ms ease;
+
+      &:active { transform: scale(0.92); }
+      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
     }
 
     .btn-approve {
@@ -515,6 +518,7 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
       &:hover {
         border-color: var(--rws-accent);
         box-shadow: 0 0 0 1px var(--rws-accent);
+        transform: translateY(-1px);
       }
     }
 

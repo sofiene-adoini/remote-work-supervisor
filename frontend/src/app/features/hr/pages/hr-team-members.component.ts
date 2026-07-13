@@ -98,7 +98,10 @@ import { HrTeamMember } from '../models/hr.models';
       }
 
       td { color: var(--rws-text); }
-      tbody tr:hover { background: #fafbfc; }
+      tbody tr {
+        transition: background 150ms ease;
+        &:hover { background: #fafbfc; }
+      }
       .num-col { text-align: right; }
       th.num-col { text-align: right; }
     }
@@ -165,6 +168,11 @@ import { HrTeamMember } from '../models/hr.models';
     .skeleton-list { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; }
     .skeleton-row { height: 48px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    @media (max-width: 767px) {
+      .members-table { font-size: 0.8125rem; }
+      .members-table th, .members-table td { padding: 0.625rem 0.75rem; }
+    }
   `],
 })
 export class HrTeamMembersComponent implements OnInit {

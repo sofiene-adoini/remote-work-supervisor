@@ -1,4 +1,4 @@
-<div class="layout-shell" [class.sidebar-collapsed]="sidebarCollapsed()">
+<div class="layout-shell">
   <!-- Mobile overlay -->
   @if (isMobile() && !sidebarCollapsed()) {
     <div class="sidebar-backdrop" (click)="closeSidebar()"></div>
@@ -11,7 +11,7 @@
     [class.collapsed]="sidebarCollapsed()"
     [class.mobile-open]="isMobile() && !sidebarCollapsed()"
   >
-      <div class="sidebar-header">
+    <div class="sidebar-header">
       <div class="brand" [class.collapsed]="sidebarCollapsed()">
         <svg lucideLayoutDashboard class="brand-icon" aria-hidden="true"></svg>
         @if (!sidebarCollapsed()) {

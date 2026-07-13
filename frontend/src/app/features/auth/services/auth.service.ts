@@ -117,7 +117,9 @@ export class AuthService {
           this.clearLocalSession();
           return of(null);
         }
-        return storedUser ? of(storedUser) : this.loadCurrentUser();
+        // After a successful refresh, currentUserSubject now holds the full
+        // profile (with role + team) loaded by refreshToken → loadCurrentUser().
+        return of(this.currentUserSubject.value);
       }),
     );
   }
@@ -131,7 +133,7 @@ export class AuthService {
    * Concurrent callers share the same in-flight request via `refreshInFlight`.
    */
 
-refreshToken(): Observable<string | null> {
+  refreshToken(): Observable<string | null> {
   if (this.refreshInFlight) {
     return this.refreshInFlight;
   }
@@ -148,17 +150,23 @@ refreshToken(): Observable<string | null> {
           this.accessToken = response.jwt;
           this.writeTokenToSession(response.jwt);
         }
-        if (response?.user) {
-          this.currentUserSubject.next(response.user);
-          this.writeUserToSession(response.user);
-        }
       }),
-      switchMap((response) => of(response?.jwt ?? null)),
+      switchMap((response) => {
+        if (!response?.jwt) {
+          return of(null);
+        }
+        // Strapi's /auth/refresh returns a user object without populated
+        // relations (role, team). Fetch the full profile from /auth/me.
+        return this.loadCurrentUser().pipe(
+          switchMap(() => of(response.jwt)),
+          catchError(() => of(response.jwt)),
+        );
+      }),
       catchError(() => of(null)),
       finalize(() => {
         this.refreshInFlight = null;
       }),
-      shareReplay(1), // <-- makes multiple subscribers share ONE actual HTTP call
+      shareReplay(1),
     );
 
   return this.refreshInFlight;
@@ -215,10 +223,12 @@ refreshToken(): Observable<string | null> {
       this.writeTokenToSession(response.jwt);
     }
 
+    // Strapi's built-in /auth/local and /auth/reset-password callbacks return a
+    // sanitized user object WITHOUT populated relations (role, team). Store it
+    // immediately so the UI can render, then fetch the full profile from /auth/me.
     if (response.user) {
       this.currentUserSubject.next(response.user);
       this.writeUserToSession(response.user);
-      return of(response.user);
     }
 
     return this.loadCurrentUser();

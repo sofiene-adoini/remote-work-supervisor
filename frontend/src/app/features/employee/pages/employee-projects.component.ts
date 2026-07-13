@@ -148,7 +148,8 @@ import { Project } from '../models/employee.models';
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      overflow: hidden;
+      overflow-x: auto;
+      overflow-y: hidden;
     }
 
     .data-table {
@@ -363,6 +364,10 @@ import { Project } from '../models/employee.models';
 
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }
+
+    @media (max-width: 639px) {
+      .th-project { min-width: 180px; }
+    }
 
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {

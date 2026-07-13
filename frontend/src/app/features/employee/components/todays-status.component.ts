@@ -168,7 +168,7 @@ import { Session } from '../models/employee.models';
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 150ms ease, transform 100ms ease;
+      transition: opacity 150ms ease, transform 100ms ease, box-shadow 150ms ease;
       font-family: inherit;
 
       &:hover:not(:disabled) { opacity: 0.92; }

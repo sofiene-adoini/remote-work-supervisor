@@ -63,6 +63,13 @@ import { HrTeam } from '../models/hr.models';
       background: #fff;
       border-radius: 12px;
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+      border: 1px solid transparent;
+      transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+
+      &:hover {
+        border-color: var(--rws-accent);
+        transform: translateY(-1px);
+      }
     }
 
     .team-icon-wrap {

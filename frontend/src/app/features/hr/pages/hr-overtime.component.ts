@@ -109,7 +109,10 @@ import { HrOvertimeDeclaration } from '../models/hr.models';
       }
 
       td { color: var(--rws-text); }
-      tbody tr:hover { background: #fafbfc; }
+      tbody tr {
+        transition: background 150ms ease;
+        &:hover { background: #fafbfc; }
+      }
       .num-col { text-align: right; }
       th.num-col { text-align: right; }
     }
@@ -151,7 +154,10 @@ import { HrOvertimeDeclaration } from '../models/hr.models';
       border: none;
       border-radius: var(--rws-radius);
       cursor: pointer;
-      transition: background-color 150ms ease;
+      transition: background-color 150ms ease, transform 100ms ease;
+
+      &:active { transform: scale(0.92); }
+      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
     }
 
     .btn-approve {
@@ -185,6 +191,11 @@ import { HrOvertimeDeclaration } from '../models/hr.models';
     .skeleton-row { height: 48px; }
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
     .icon-xs { width: 14px; height: 14px; }
+
+    @media (max-width: 767px) {
+      .ot-table { font-size: 0.8125rem; }
+      .ot-table th, .ot-table td { padding: 0.625rem 0.75rem; }
+    }
   `],
 })
 export class HrOvertimeComponent implements OnInit {
