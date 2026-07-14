@@ -98,6 +98,13 @@ plugin.contentTypes.user.schema.attributes.projects = {
   target: 'api::project.project',
   mappedBy: 'users',
 };
+
+plugin.contentTypes.user.schema.attributes.managedTeam = {
+  type: 'relation',
+  relation: 'oneToOne',
+  target: 'api::team.team',
+  mappedBy: 'manager',
+};
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';

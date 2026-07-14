@@ -15,10 +15,22 @@
       "required": true,
       "unique": true
     },
+    "manager": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "managedTeam"
+    },
     "users": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "plugin::users-permissions.user",
+      "mappedBy": "team"
+    },
+    "projects": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project.project",
       "mappedBy": "team"
     }
   }

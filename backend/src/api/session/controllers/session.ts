@@ -155,6 +155,89 @@ export default {
     return ctx.send({ session: updated });
   },
 
+  async history(ctx:Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const { weekStart } = ctx.query as { weekStart?: string };
+    const monday = weekStart ? new Date(weekStart as string) : (() => {
+      const d = new Date();
+      const dayOfWeek = d.getDay();
+      d.setDate(d.getDate() - ((dayOfWeek + 6) % 7));
+      d.setHours(0, 0, 0, 0);
+      return d;
+    })();
+
+    if (weekStart) {
+      monday.setHours(0, 0, 0, 0);
+    }
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 7);
+
+    const sessions = await strapi.db.query(SESSION_UID).findMany({
+      where: {
+        user: userId,
+        clockIn: {
+          $gte: monday.toISOString(),
+          $lt: sunday.toISOString(),
+        },
+      },
+      orderBy: { clockIn: 'asc' },
+    });
+
+    const enriched = sessions.map((s) => {
+      const start = new Date(s.clockIn).getTime();
+      const end = s.clockOut ? new Date(s.clockOut).getTime() : Date.now();
+      const totalMin = (end - start) / 60000;
+      const breakMin = s.totalBreakMinutes || 0;
+      const workedMin = Math.max(0, totalMin - breakMin);
+      return {
+        ...s,
+        workedMinutes: Math.round(workedMin),
+      };
+    });
+
+    return ctx.send({ sessions: enriched });
+  },
+
+  async todayDetail(ctx:Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sessions = await strapi.db.query(SESSION_UID).findMany({
+      where: {
+        user: userId,
+        clockIn: { $gte: today.toISOString() },
+      },
+      orderBy: { clockIn: 'asc' },
+    });
+
+    const enriched = sessions.map((s) => {
+      const start = new Date(s.clockIn).getTime();
+      const end = s.clockOut ? new Date(s.clockOut).getTime() : Date.now();
+      const totalMin = (end - start) / 60000;
+      const breakMin = s.totalBreakMinutes || 0;
+      const workedMin = Math.max(0, totalMin - breakMin);
+      return {
+        ...s,
+        workedMinutes: Math.round(workedMin),
+      };
+    });
+
+    const totalWorkedMin = enriched.reduce((sum, s) => sum + s.workedMinutes, 0);
+    const totalBreakMin = enriched.reduce((sum, s) => sum + (s.totalBreakMinutes || 0), 0);
+
+    return ctx.send({
+      sessions: enriched,
+      totalWorkedMinutes: totalWorkedMin,
+      totalBreakMinutes: totalBreakMin,
+    });
+  },
+
   async weeklyHours(ctx:Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');

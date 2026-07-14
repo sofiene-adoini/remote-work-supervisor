@@ -7,7 +7,8 @@ import { map } from 'rxjs';
 import { AuthService } from '../../../features/auth/services/auth.service';
 import {
   LucideLayoutDashboard,
-  LucideUsers,
+  LucideUser,
+  LucideUsersRound,
   LucideFolderOpen,
   LucideTriangleAlert,
   LucideChartBar,
@@ -34,7 +35,8 @@ interface NavItem {
     RouterLinkActive,
     NgComponentOutlet,
     LucideLayoutDashboard,
-    LucideUsers,
+    LucideUser,
+    LucideUsersRound,
     LucideFolderOpen,
     LucideTriangleAlert,
     LucideChartBar,
@@ -75,8 +77,9 @@ export class DashboardLayoutComponent {
     { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee', 'Manager'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee', 'Manager'] },
     { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
-    { label: 'Members', icon: LucideUsers, path: '/hr/members', roles: ['HR', 'Admin'] },
-    { label: 'Teams', icon: LucideFolderOpen, path: '/hr/teams', roles: ['HR', 'Admin'] },
+    { label: 'Members', icon: LucideUser, path: '/hr/members', roles: ['HR', 'Admin'] },
+    { label: 'Teams', icon: LucideUsersRound, path: '/hr/teams', roles: ['HR', 'Admin'] },
+    { label: 'Projects', icon: LucideFolderOpen, path: '/hr/projects', roles: ['HR', 'Admin'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },
     { label: 'Alerts', icon: LucideTriangleAlert, path: '/hr/alerts', roles: ['HR', 'Admin'] },
   ];

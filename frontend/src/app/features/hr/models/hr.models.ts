@@ -43,3 +43,33 @@ export interface HrAlert {
   user?: { id: number; fullName: string };
   createdAt: string;
 }
+
+export interface HrManager {
+  id: number;
+  fullName: string;
+  email: string;
+}
+
+export interface HrUnassignedEmployee {
+  id: number;
+  fullName: string;
+  email: string;
+  roleName: string;
+}
+
+export interface HrTeamDetail {
+  id: number;
+  name: string;
+  manager?: { id: number; fullName: string; email: string } | null;
+  users: { id: number; fullName: string; email: string }[];
+}
+
+export interface HrProject {
+  id: number;
+  name: string;
+  description: string;
+  status: string;
+  team?: { id: number; name: string } | null;
+  users: { id: number; fullName: string }[];
+  createdAt: string;
+}

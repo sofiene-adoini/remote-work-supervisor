@@ -20,9 +20,9 @@ import { Alert } from '../models/employee.models';
       </div>
 
       @if (loading()) {
-        <div class="loading-state">
+        <div class="sk-list">
           @for (i of [1,2,3,4,5]; track i) {
-            <div class="skeleton-row"></div>
+            <div class="sk sk-row-lg"></div>
           }
         </div>
       } @else if (alerts().length === 0) {
@@ -105,22 +105,6 @@ import { Alert } from '../models/employee.models';
     .empty-icon { width: 48px; height: 48px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 1rem; }
     .empty-text { margin: 0 0 0.375rem; font-size: 1.0625rem; font-weight: 500; color: var(--rws-text); }
     .empty-sub { margin: 0; font-size: 0.875rem; color: var(--rws-text-muted); }
-
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .skeleton-row {
-      height: 72px;
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--rws-bg) 25%, #eef0f2 50%, var(--rws-bg) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     .alert-list {
       display: flex;

@@ -14,9 +14,9 @@ import { Project } from '../models/employee.models';
       </div>
 
       @if (loading()) {
-        <div class="loading-state">
+        <div class="sk-list">
           @for (i of [1,2,3]; track i) {
-            <div class="skeleton-row"></div>
+            <div class="sk sk-row-lg"></div>
           }
         </div>
       } @else if (projects().length === 0) {
@@ -99,7 +99,7 @@ import { Project } from '../models/employee.models';
   styles: [`
     @use 'styles/design-tokens' as t;
 
-    .page-container { max-width: 960px; }
+    .page-container { width: 100%; }
 
     .page-header {
       margin-bottom: 1.5rem;
@@ -127,22 +127,6 @@ import { Project } from '../models/employee.models';
     .empty-icon { width: 48px; height: 48px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 1rem; }
     .empty-text { margin: 0 0 0.375rem; font-size: 1.0625rem; font-weight: 500; color: var(--rws-text); }
     .empty-sub { margin: 0; font-size: 0.875rem; color: var(--rws-text-muted); }
-
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .skeleton-row {
-      height: 52px;
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--rws-bg) 25%, #eef0f2 50%, var(--rws-bg) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     .table-wrapper {
       background: #fff;
@@ -175,7 +159,8 @@ import { Project } from '../models/employee.models';
       color: var(--rws-text-muted);
     }
 
-    .th-hours { text-align: right; width: 100px; }
+    .th-project { width: 1%; white-space: nowrap; }
+    .th-hours { text-align: right; width: 120px; }
     .th-actions { width: 120px; }
 
     tbody tr {
@@ -201,7 +186,7 @@ import { Project } from '../models/employee.models';
     .project-desc {
       font-size: 0.8125rem;
       color: var(--rws-text-muted);
-      max-width: 360px;
+      max-width: 600px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;

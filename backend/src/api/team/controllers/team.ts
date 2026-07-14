@@ -75,6 +75,194 @@ export default {
     return ctx.send({ members });
   },
 
+  async availableManagers(ctx: Context) {
+    const managers = await strapi.db.query(USER_UID).findMany({
+      where: {
+        role: { name: 'Manager' },
+        managedTeam: { id: null },
+      },
+      populate: ['role'],
+      orderBy: { fullName: 'asc' },
+    });
+    return ctx.send({ managers: managers.map((m) => ({ id: m.id, fullName: m.fullName, email: m.email })) });
+  },
+
+  async unassignedEmployees(ctx: Context) {
+    const employees = await strapi.db.query(USER_UID).findMany({
+      where: {
+        $or: [
+          { role: { name: 'Employee' } },
+          { role: { name: 'Manager' } },
+        ],
+        team: { id: null },
+      },
+      populate: ['role'],
+      orderBy: { fullName: 'asc' },
+    });
+    return ctx.send({
+      employees: employees.map((e) => ({
+        id: e.id,
+        fullName: e.fullName,
+        email: e.email,
+        roleName: e.role?.name ?? 'Employee',
+      })),
+    });
+  },
+
+  async create(ctx: Context) {
+    const { name, managerId, memberIds } = ctx.request.body as {
+      name?: string;
+      managerId?: number;
+      memberIds?: number[];
+    };
+
+    if (!name?.trim()) {
+      return ctx.badRequest('Team name is required');
+    }
+
+    if (managerId) {
+      const manager = await strapi.db.query(USER_UID).findOne({
+        where: { id: managerId },
+        populate: ['role', 'managedTeam'],
+      });
+      if (!manager) return ctx.badRequest('Manager not found');
+      if (manager.role?.name !== 'Manager' && manager.role?.name !== 'Admin') {
+        return ctx.badRequest('User must have a Manager or Admin role');
+      }
+      if (manager.managedTeam) {
+        return ctx.badRequest('This manager is already assigned to a team');
+      }
+    }
+
+    const validMemberIds: number[] = [];
+    if (memberIds?.length) {
+      for (const mid of memberIds) {
+        const user = await strapi.db.query(USER_UID).findOne({
+          where: { id: mid },
+          populate: ['team'],
+        });
+        if (!user) return ctx.badRequest(`User ${mid} not found`);
+        if (user.team) return ctx.badRequest(`User ${mid} is already assigned to a team`);
+        validMemberIds.push(mid);
+      }
+    }
+
+    const team = await strapi.db.query(TEAM_UID).create({
+      data: { name: name.trim() },
+    });
+
+    if (managerId) {
+      await strapi.db.query(TEAM_UID).update({
+        where: { id: team.id },
+        data: { manager: managerId },
+      });
+    }
+
+    for (const mid of validMemberIds) {
+      await strapi.db.query(USER_UID).update({
+        where: { id: mid },
+        data: { team: team.id },
+      });
+    }
+
+    const result = await strapi.db.query(TEAM_UID).findOne({
+      where: { id: team.id },
+      populate: ['manager', 'users'],
+    });
+
+    return ctx.send({ team: result });
+  },
+
+  async updateMembers(ctx: Context) {
+    const { id } = ctx.params;
+    const { addMemberIds, removeMemberIds } = ctx.request.body as {
+      addMemberIds?: number[];
+      removeMemberIds?: number[];
+    };
+
+    const team = await strapi.db.query(TEAM_UID).findOne({
+      where: { id: parseInt(id, 10) },
+      populate: ['users'],
+    });
+    if (!team) return ctx.notFound('Team not found');
+
+    if (removeMemberIds?.length) {
+      for (const mid of removeMemberIds) {
+        const user = await strapi.db.query(USER_UID).findOne({
+          where: { id: mid },
+          populate: ['team'],
+        });
+        if (user?.team?.id === team.id) {
+          await strapi.db.query(USER_UID).update({
+            where: { id: mid },
+            data: { team: null },
+          });
+        }
+      }
+    }
+
+    if (addMemberIds?.length) {
+      for (const mid of addMemberIds) {
+        const user = await strapi.db.query(USER_UID).findOne({
+          where: { id: mid },
+          populate: ['team'],
+        });
+        if (!user) continue;
+        if (user.team) {
+          return ctx.badRequest(`User ${mid} is already assigned to a team`);
+        }
+        await strapi.db.query(USER_UID).update({
+          where: { id: mid },
+          data: { team: team.id },
+        });
+      }
+    }
+
+    const updated = await strapi.db.query(TEAM_UID).findOne({
+      where: { id: team.id },
+      populate: ['manager', 'users'],
+    });
+
+    return ctx.send({ team: updated });
+  },
+
+  async updateManager(ctx: Context) {
+    const { id } = ctx.params;
+    const { managerId } = ctx.request.body as { managerId?: number | null };
+
+    const team = await strapi.db.query(TEAM_UID).findOne({
+      where: { id: parseInt(id, 10) },
+      populate: ['manager'],
+    });
+    if (!team) return ctx.notFound('Team not found');
+
+    if (managerId) {
+      const manager = await strapi.db.query(USER_UID).findOne({
+        where: { id: managerId },
+        populate: ['role', 'managedTeam'],
+      });
+      if (!manager) return ctx.badRequest('Manager not found');
+      if (manager.role?.name !== 'Manager' && manager.role?.name !== 'Admin') {
+        return ctx.badRequest('User must have a Manager or Admin role');
+      }
+      if (manager.managedTeam && manager.managedTeam.id !== team.id) {
+        return ctx.badRequest('This manager is already assigned to another team');
+      }
+    }
+
+    await strapi.db.query(TEAM_UID).update({
+      where: { id: team.id },
+      data: { manager: managerId || null },
+    });
+
+    const updated = await strapi.db.query(TEAM_UID).findOne({
+      where: { id: team.id },
+      populate: ['manager', 'users'],
+    });
+
+    return ctx.send({ team: updated });
+  },
+
   async allMembers(ctx: Context) {
     const users = await strapi.db.query(USER_UID).findMany({
       where: { role: { name: 'Employee' } },

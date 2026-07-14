@@ -11,6 +11,10 @@ export const EMPLOYEE_ROUTES: Routes = [
     loadComponent: () => import('./pages/employee-dashboard.component').then((m) => m.EmployeeDashboardComponent),
   },
   {
+    path: 'time',
+    loadComponent: () => import('./pages/employee-time.component').then((m) => m.EmployeeTimeComponent),
+  },
+  {
     path: 'projects',
     loadComponent: () => import('./pages/employee-projects.component').then((m) => m.EmployeeProjectsComponent),
   },

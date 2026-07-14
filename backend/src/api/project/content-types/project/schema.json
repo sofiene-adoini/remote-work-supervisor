@@ -23,6 +23,12 @@
       "default": "active",
       "required": true
     },
+    "team": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::team.team",
+      "inversedBy": "projects"
+    },
     "users": {
       "type": "relation",
       "relation": "manyToMany",

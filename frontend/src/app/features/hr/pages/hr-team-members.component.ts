@@ -14,9 +14,9 @@ import { HrTeamMember } from '../models/hr.models';
 
     @if (loading()) {
       <div class="card">
-        <div class="skeleton-list">
+        <div class="sk-list-padded">
           @for (i of [1,2,3,4,5]; track i) {
-            <div class="skeleton skeleton-row"></div>
+            <div class="sk sk-row"></div>
           }
         </div>
       </div>
@@ -163,11 +163,6 @@ import { HrTeamMember } from '../models/hr.models';
     .empty-icon { width: 48px; height: 48px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 1rem; }
     .empty-title { margin: 0 0 0.375rem; font-size: 1.125rem; font-weight: 600; color: var(--rws-text); }
     .empty-sub { margin: 0; font-size: 0.875rem; color: var(--rws-text-muted); }
-
-    .skeleton { background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-    .skeleton-list { display: flex; flex-direction: column; gap: 0.75rem; padding: 1rem; }
-    .skeleton-row { height: 48px; }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     @media (max-width: 767px) {
       .members-table { font-size: 0.8125rem; }

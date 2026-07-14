@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_PATH } from '../../../core/constants/app.constants';
-import { Session, SessionResponse, WeeklyHoursResponse } from '../models/employee.models';
+import { Session, SessionResponse, WeeklyHoursResponse, SessionHistoryResponse, TodayDetailResponse } from '../models/employee.models';
 
 @Injectable({ providedIn: 'root' })
 export class TimeEntriesService {
@@ -31,5 +31,16 @@ export class TimeEntriesService {
 
   getWeeklyHours(): Observable<WeeklyHoursResponse> {
     return this.http.get<WeeklyHoursResponse>(`${this.base}/weekly-hours`, { withCredentials: true });
+  }
+
+  getHistory(weekStart: string): Observable<SessionHistoryResponse> {
+    return this.http.get<SessionHistoryResponse>(`${this.base}/history`, {
+      params: { weekStart },
+      withCredentials: true,
+    });
+  }
+
+  getTodayDetail(): Observable<TodayDetailResponse> {
+    return this.http.get<TodayDetailResponse>(`${this.base}/today-detail`, { withCredentials: true });
   }
 }

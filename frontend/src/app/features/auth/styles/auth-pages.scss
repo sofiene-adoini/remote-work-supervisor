@@ -1,7 +1,7 @@
 .auth-form {
   display: grid;
   gap: 1.125rem;
-  padding: 2rem;
+  padding: 0;
   animation: auth-page-in 180ms ease;
 }
 
@@ -12,9 +12,10 @@
 
 .auth-copy h1 {
   margin: 0;
-  color: var(--rws-text);
+  color: var(--rws-primary);
   font-size: 1.55rem;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .auth-copy p {
@@ -30,14 +31,14 @@
 
 .auth-field label {
   color: var(--rws-text);
-  font-size: 0.92rem;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
 .auth-field input {
   width: 100%;
-  border: 1px solid var(--rws-border);
-  border-radius: 8px;
+  border: 1.5px solid var(--rws-border);
+  border-radius: var(--rws-radius);
   padding: 0.85rem 0.9rem;
   color: var(--rws-text);
   background: #ffffff;
@@ -62,7 +63,7 @@
 }
 
 .auth-error {
-  color: var(--rws-error);
+  color: var(--rws-red);
 }
 
 .auth-status {
@@ -81,22 +82,21 @@
   justify-content: center;
   gap: 0.55rem;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--rws-radius);
   padding: 0.75rem 1rem;
-  // WCAG AA: white-on-#1FB6A6 ≈ 1.9:1 (fails). Indigo-on-#1FB6A6 ≈ 4.7:1 (passes).
-  // Keep the teal fill per the design spec, use indigo as the button foreground.
-  color: var(--rws-primary);
+  color: #fff;
   background: var(--rws-accent);
   font: inherit;
   font-weight: 700;
   cursor: pointer;
   transition:
     opacity 150ms ease,
-    transform 150ms ease;
+    transform 150ms ease,
+    background-color 150ms ease;
 }
 
 .auth-button:hover:not(:disabled) {
-  opacity: 0.92;
+  background: var(--rws-accent-strong);
 }
 
 .auth-button:active:not(:disabled) {
@@ -117,20 +117,22 @@
 .auth-link {
   width: fit-content;
   border-radius: 6px;
-  color: var(--rws-primary);
+  color: var(--rws-accent);
   font-weight: 600;
+  font-size: 0.875rem;
   text-decoration: none;
 }
 
 .auth-link:hover {
   text-decoration: underline;
+  color: var(--rws-accent-strong);
 }
 
 .auth-spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid rgb(43 58 103 / 45%);
-  border-top-color: var(--rws-primary);
+  border: 2px solid rgb(255 255 255 / 40%);
+  border-top-color: #fff;
   border-radius: 999px;
   animation: auth-spin 800ms linear infinite;
 }

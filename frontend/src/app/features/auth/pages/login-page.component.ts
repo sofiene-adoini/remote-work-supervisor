@@ -13,7 +13,7 @@ import { AutofocusDirective } from '../../../shared/directives/autofocus.directi
     <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="auth-copy">
         <h1>Sign in</h1>
-        <p>Access your Remote Work Supervisor dashboard.</p>
+        <p>Access your Assas dashboard.</p>
       </div>
 
       <div class="auth-field">

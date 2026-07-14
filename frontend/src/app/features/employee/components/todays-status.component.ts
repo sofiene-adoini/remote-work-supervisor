@@ -8,56 +8,56 @@ import { Session } from '../models/employee.models';
   imports: [DatePipe, LucideClock, LucideLogOut, LucideCoffee, LucideLogIn],
   template: `
     <div class="card status-card">
-      <div class="card-header">
-        <h2 class="card-title">Today's Status</h2>
-        <span class="status-badge" [class]="statusClass()">
-          {{ statusLabel() }}
-        </span>
-      </div>
+        <div class="card-header">
+          <h2 class="card-title">Today's Status</h2>
+          <span class="status-badge" [class]="statusClass()">
+            {{ statusLabel() }}
+          </span>
+        </div>
 
-      <div class="card-body">
-        <div class="status-main">
-          <div class="elapsed-time">
-            <span class="elapsed-value">{{ elapsedTime() }}</span>
-            <span class="elapsed-label">worked today</span>
+        <div class="card-body">
+          <div class="status-main">
+            <div class="elapsed-time">
+              <span class="elapsed-value">{{ elapsedTime() }}</span>
+              <span class="elapsed-label">worked today</span>
+            </div>
+
+            @if (session()?.breakStart && !session()?.breakEnd && session()?.status === 'break') {
+              <div class="break-info">
+                <svg lucideCoffee class="icon-sm" aria-hidden="true"></svg>
+                <span>On break since {{ session()?.breakStart | date:'shortTime' }}</span>
+              </div>
+            }
           </div>
 
-          @if (session()?.breakStart && !session()?.breakEnd && session()?.status === 'break') {
-            <div class="break-info">
-              <svg lucideCoffee class="icon-sm" aria-hidden="true"></svg>
-              <span>On break since {{ session()?.breakStart | date:'shortTime' }}</span>
-            </div>
-          }
-        </div>
-
-        <div class="status-actions">
-          @if (status() === 'clocked_out') {
-            <button class="btn btn-primary" type="button" (click)="onClockIn.emit()" [disabled]="loading()">
-              <svg lucideLogIn class="icon-sm" aria-hidden="true"></svg>
-              Clock In
-            </button>
-          } @else if (status() === 'active') {
-            <button class="btn btn-primary" type="button" (click)="onClockOut.emit()" [disabled]="loading()">
-              <svg lucideLogOut class="icon-sm" aria-hidden="true"></svg>
-              Clock Out
-            </button>
-            <button class="btn btn-secondary" type="button" (click)="onStartBreak.emit()" [disabled]="loading()">
-              <svg lucideCoffee class="icon-sm" aria-hidden="true"></svg>
-              Start Break
-            </button>
-          } @else if (status() === 'break') {
-            <button class="btn btn-accent" type="button" (click)="onEndBreak.emit()" [disabled]="loading()">
-              <svg lucideClock class="icon-sm" aria-hidden="true"></svg>
-              End Break
-            </button>
-            <button class="btn btn-secondary" type="button" (click)="onClockOut.emit()" [disabled]="loading()">
-              <svg lucideLogOut class="icon-sm" aria-hidden="true"></svg>
-              Clock Out
-            </button>
-          }
+          <div class="status-actions">
+            @if (status() === 'clocked_out') {
+              <button class="btn btn-primary" type="button" (click)="onClockIn.emit()" [disabled]="loading()">
+                <svg lucideLogIn class="icon-sm" aria-hidden="true"></svg>
+                Clock In
+              </button>
+            } @else if (status() === 'active') {
+              <button class="btn btn-primary" type="button" (click)="onClockOut.emit()" [disabled]="loading()">
+                <svg lucideLogOut class="icon-sm" aria-hidden="true"></svg>
+                Clock Out
+              </button>
+              <button class="btn btn-secondary" type="button" (click)="onStartBreak.emit()" [disabled]="loading()">
+                <svg lucideCoffee class="icon-sm" aria-hidden="true"></svg>
+                Start Break
+              </button>
+            } @else if (status() === 'break') {
+              <button class="btn btn-accent" type="button" (click)="onEndBreak.emit()" [disabled]="loading()">
+                <svg lucideClock class="icon-sm" aria-hidden="true"></svg>
+                End Break
+              </button>
+              <button class="btn btn-secondary" type="button" (click)="onClockOut.emit()" [disabled]="loading()">
+                <svg lucideLogOut class="icon-sm" aria-hidden="true"></svg>
+                Clock Out
+              </button>
+            }
+          </div>
         </div>
       </div>
-    </div>
   `,
   styles: [`
     @use 'styles/design-tokens' as t;
