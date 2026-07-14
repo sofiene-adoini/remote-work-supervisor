@@ -19,9 +19,9 @@ import { OvertimeDeclaration } from '../models/employee.models';
       </div>
 
       @if (loading()) {
-        <div class="loading-state">
+        <div class="sk-list">
           @for (i of [1,2,3]; track i) {
-            <div class="skeleton-row"></div>
+            <div class="sk sk-row-lg"></div>
           }
         </div>
       } @else if (declarations().length === 0) {
@@ -105,7 +105,7 @@ import { OvertimeDeclaration } from '../models/employee.models';
   styles: [`
     @use 'styles/design-tokens' as t;
 
-    .page-container { max-width: 800px; }
+    .page-container { width: 100%; }
 
     .page-header {
       display: flex;
@@ -140,16 +140,6 @@ import { OvertimeDeclaration } from '../models/employee.models';
     .empty-text { margin: 0 0 0.375rem; font-size: 1.0625rem; font-weight: 500; color: var(--rws-text); }
     .empty-sub { margin: 0; font-size: 0.875rem; color: var(--rws-text-muted); }
 
-    .loading-state { display: flex; flex-direction: column; gap: 0.75rem; }
-    .skeleton-row {
-      height: 52px;
-      border-radius: 8px;
-      background: linear-gradient(90deg, var(--rws-bg) 25%, #eef0f2 50%, var(--rws-bg) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
-
     .table-wrapper {
       background: #fff;
       border-radius: 12px;
@@ -171,7 +161,8 @@ import { OvertimeDeclaration } from '../models/employee.models';
       color: var(--rws-text-muted);
     }
 
-    .th-hours, .th-status { text-align: right; width: 100px; }
+    .th-date { width: 1%; white-space: nowrap; }
+    .th-hours, .th-status { text-align: right; width: 120px; }
 
     tbody tr {
       border-bottom: 1px solid var(--rws-border);
@@ -181,7 +172,7 @@ import { OvertimeDeclaration } from '../models/employee.models';
 
     .td-date { font-weight: 500; color: var(--rws-text); }
     .td-hours { text-align: right; font-family: var(--rws-font-mono); font-weight: 500; color: var(--rws-text); }
-    .td-reason { color: var(--rws-text); max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-reason { color: var(--rws-text); max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .td-status { text-align: right; }
 
     .status-badge {

@@ -14,35 +14,70 @@ import { Session, Alert, Project } from '../models/employee.models';
   template: `
     <div class="dashboard-grid">
       <!-- Today's Status (full-width) -->
-      <app-todays-status
-        class="grid-full"
-        [session]="currentSession()"
-        [status]="currentStatus()"
-        [loading]="statusLoading()"
-        (onClockIn)="handleClockIn()"
-        (onClockOut)="handleClockOut()"
-        (onStartBreak)="handleStartBreak()"
-        (onEndBreak)="handleEndBreak()"
-      />
+      @if (statusLoading()) {
+        <div class="grid-full">
+          <div class="sk-status-card">
+            <div class="sk-status-header">
+              <div class="sk sk-title"></div>
+              <div class="sk" style="width: 80px; height: 28px; border-radius: 999px;"></div>
+            </div>
+            <div class="sk-status-body">
+              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div class="sk sk-num-lg"></div>
+                <div class="sk sk-text-sm" style="width: 80px;"></div>
+              </div>
+              <div style="display: flex; gap: 0.75rem;">
+                <div class="sk" style="width: 100px; height: 40px; border-radius: var(--rws-radius);"></div>
+                <div class="sk" style="width: 110px; height: 40px; border-radius: var(--rws-radius);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <app-todays-status
+          class="grid-full"
+          [session]="currentSession()"
+          [status]="currentStatus()"
+          [loading]="statusLoading()"
+          (onClockIn)="handleClockIn()"
+          (onClockOut)="handleClockOut()"
+          (onStartBreak)="handleStartBreak()"
+          (onEndBreak)="handleEndBreak()"
+        />
+      }
 
       <!-- This Week -->
       <div class="card grid-half">
         <div class="card-header">
           <h2 class="card-title">This Week</h2>
-          <span class="card-meta">{{ totalWeekHours() }}h total</span>
+          @if (!weeklyLoading()) {
+            <span class="card-meta">{{ totalWeekHours() }}h total</span>
+          }
         </div>
         <div class="card-body">
-          <div class="week-bars">
-            @for (day of weeklyDays(); track day) {
-              <div class="bar-row" [class.today]="isToday(day)">
-                <span class="bar-label">{{ day }}</span>
-                <div class="bar-track">
-                  <div class="bar-fill" [style.width.%]="barWidth(day)"></div>
+          @if (weeklyLoading()) {
+            <div class="sk-week-bars">
+              @for (i of [1,2,3,4,5]; track i) {
+                <div class="sk-week-row">
+                  <div class="sk sk-text-sm"></div>
+                  <div class="sk" style="height: 8px; border-radius: 4px;"></div>
+                  <div class="sk sk-num" style="width: 32px; height: 14px;"></div>
                 </div>
-                <span class="bar-value">{{ weeklyHours()[day] ?? 0 }}h</span>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          } @else {
+            <div class="week-bars">
+              @for (day of weeklyDays(); track day) {
+                <div class="bar-row" [class.today]="isToday(day)">
+                  <span class="bar-label">{{ day }}</span>
+                  <div class="bar-track">
+                    <div class="bar-fill" [style.width.%]="barWidth(day)"></div>
+                  </div>
+                  <span class="bar-value">{{ weeklyHours()[day] ?? 0 }}h</span>
+                </div>
+              }
+            </div>
+          }
         </div>
       </div>
 
@@ -50,13 +85,15 @@ import { Session, Alert, Project } from '../models/employee.models';
       <div class="card grid-half">
         <div class="card-header">
           <h2 class="card-title">Recent Activity</h2>
-          <a class="link-btn" routerLink="/employee/alerts">View all</a>
+          @if (!alertsLoading() && recentAlerts().length > 0) {
+            <a class="link-btn" routerLink="/employee/alerts">View all</a>
+          }
         </div>
         <div class="card-body">
           @if (alertsLoading()) {
-            <div class="alert-loading">
+            <div class="sk-list">
               @for (i of [1,2,3]; track i) {
-                <div class="skeleton-alert"></div>
+                <div class="sk sk-row"></div>
               }
             </div>
           } @else if (recentAlerts().length === 0) {
@@ -88,7 +125,11 @@ import { Session, Alert, Project } from '../models/employee.models';
           <a class="action-card" routerLink="/employee/projects">
             <svg lucideFolderOpen class="action-icon" aria-hidden="true"></svg>
             <span class="action-label">My Projects</span>
-            <span class="action-sub">{{ projectCount() }} assigned</span>
+            @if (projectsLoading()) {
+              <div class="sk sk-num" style="width: 56px; height: 12px;"></div>
+            } @else {
+              <span class="action-sub">{{ projectCount() }} assigned</span>
+            }
             <svg lucideArrowRight class="action-arrow" aria-hidden="true"></svg>
           </a>
           <a class="action-card" routerLink="/employee/overtime">
@@ -197,7 +238,6 @@ import { Session, Alert, Project } from '../models/employee.models';
       font-weight: 500;
     }
 
-    // ── Alert list ─────────────────────────────────────────────
     .alert-list-empty {
       display: flex;
       flex-direction: column;
@@ -210,22 +250,6 @@ import { Session, Alert, Project } from '../models/employee.models';
     .alert-empty-icon { width: 32px; height: 32px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 0.75rem; }
     .alert-empty-text { margin: 0 0 0.25rem; font-size: 0.9375rem; font-weight: 500; color: var(--rws-text); }
     .alert-empty-sub { margin: 0; font-size: 0.8125rem; color: var(--rws-text-muted); }
-
-    .alert-loading {
-      display: flex;
-      flex-direction: column;
-      gap: 0.625rem;
-    }
-
-    .skeleton-alert {
-      height: 48px;
-      border-radius: 6px;
-      background: linear-gradient(90deg, var(--rws-bg) 25%, #eef0f2 50%, var(--rws-bg) 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     .alert-list {
       display: flex;
@@ -344,12 +368,14 @@ export class EmployeeDashboardComponent implements OnInit {
 
   protected readonly currentSession = signal<Session | null>(null);
   protected readonly currentStatus = signal<'clocked_out' | 'active' | 'break'>('clocked_out');
-  protected readonly statusLoading = signal(false);
+  protected readonly statusLoading = signal(true);
   protected readonly weeklyHours = signal<Record<string, number>>({});
   protected readonly weeklyDays = signal<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  protected readonly weeklyLoading = signal(true);
   protected readonly recentAlerts = signal<Alert[]>([]);
   protected readonly alertsLoading = signal(true);
   protected readonly projectCount = signal(0);
+  protected readonly projectsLoading = signal(true);
 
   protected readonly totalWeekHours = () => {
     const hours = this.weeklyHours();
@@ -380,19 +406,24 @@ export class EmployeeDashboardComponent implements OnInit {
       next: (res) => {
         this.currentSession.set(res.session);
         this.currentStatus.set(res.status);
+        this.statusLoading.set(false);
       },
       error: () => {
         this.currentStatus.set('clocked_out');
+        this.statusLoading.set(false);
       },
     });
   }
 
   private loadWeeklyHours(): void {
+    this.weeklyLoading.set(true);
     this.timeService.getWeeklyHours().subscribe({
       next: (res) => {
         this.weeklyHours.set(res.hoursByDay);
         this.weeklyDays.set(res.days);
+        this.weeklyLoading.set(false);
       },
+      error: () => this.weeklyLoading.set(false),
     });
   }
 
@@ -407,8 +438,13 @@ export class EmployeeDashboardComponent implements OnInit {
   }
 
   private loadProjectCount(): void {
+    this.projectsLoading.set(true);
     this.projectsService.getMyProjects().subscribe({
-      next: (res) => this.projectCount.set(res.projects.length),
+      next: (res) => {
+        this.projectCount.set(res.projects.length);
+        this.projectsLoading.set(false);
+      },
+      error: () => this.projectsLoading.set(false),
     });
   }
 

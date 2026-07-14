@@ -16,11 +16,15 @@ export const HR_ROUTES: Routes = [
   },
   {
     path: 'teams/:teamId',
-    loadComponent: () => import('./pages/hr-team-members.component').then((m) => m.HrTeamMembersComponent),
+    loadComponent: () => import('./pages/hr-team-detail.component').then((m) => m.HrTeamDetailComponent),
   },
   {
     path: 'members',
     loadComponent: () => import('./pages/hr-team-members.component').then((m) => m.HrTeamMembersComponent),
+  },
+  {
+    path: 'projects',
+    loadComponent: () => import('./pages/hr-projects.component').then((m) => m.HrProjectsComponent),
   },
   {
     path: 'overtime',

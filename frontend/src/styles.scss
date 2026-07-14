@@ -1,5 +1,6 @@
 @use '@angular/material' as mat;
 @use 'styles/design-tokens';
+@use 'styles/skeletons';
 
 @include mat.core();
 

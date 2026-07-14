@@ -38,7 +38,7 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
             </div>
             <div class="stat-body">
               @if (statsLoading()) {
-                <div class="skeleton skeleton-num"></div>
+                <div class="sk sk-num"></div>
               } @else {
                 <span class="stat-value">{{ card.value }}</span>
               }
@@ -59,9 +59,9 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
             </a>
           </div>
           @if (membersLoading()) {
-            <div class="skeleton-list">
+            <div class="sk-list">
               @for (i of [1,2,3,4]; track i) {
-                <div class="skeleton skeleton-row"></div>
+                <div class="sk sk-row"></div>
               }
             </div>
           } @else if (activeMembers().length === 0) {
@@ -97,9 +97,9 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
             </a>
           </div>
           @if (overtimeLoading()) {
-            <div class="skeleton-list">
+            <div class="sk-list">
               @for (i of [1,2,3]; track i) {
-                <div class="skeleton skeleton-row"></div>
+                <div class="sk sk-row"></div>
               }
             </div>
           } @else if (pendingOvertime().length === 0) {
@@ -138,9 +138,9 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
             </a>
           </div>
           @if (alertsLoading()) {
-            <div class="skeleton-list">
+            <div class="sk-list">
               @for (i of [1,2,3]; track i) {
-                <div class="skeleton skeleton-row"></div>
+                <div class="sk sk-row"></div>
               }
             </div>
           } @else if (recentAlerts().length === 0) {
@@ -538,26 +538,6 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
 
     .empty-icon { width: 36px; height: 36px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 0.75rem; }
     .empty-text { margin: 0; font-size: 0.875rem; color: var(--rws-text-muted); }
-
-    /* ── Skeleton ──────────────────────────────────────────── */
-    .skeleton {
-      background: linear-gradient(90deg, #f0f2f5 25%, #e8eaed 50%, #f0f2f5 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
-      border-radius: 6px;
-    }
-
-    .skeleton-num { width: 40px; height: 24px; }
-
-    .skeleton-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .skeleton-row { height: 48px; width: 100%; }
-
-    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
     .icon-xs { width: 14px; height: 14px; }
     .icon-sm { width: 20px; height: 20px; }

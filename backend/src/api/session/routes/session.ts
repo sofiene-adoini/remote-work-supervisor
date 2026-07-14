@@ -44,6 +44,22 @@ export default {
     },
     {
       method: 'GET',
+      path: '/sessions/history',
+      handler: 'session.history',
+      config: {
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/sessions/today-detail',
+      handler: 'session.todayDetail',
+      config: {
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
       path: '/sessions/weekly-hours',
       handler: 'session.weeklyHours',
       config: {

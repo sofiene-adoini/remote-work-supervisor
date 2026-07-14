@@ -13,9 +13,12 @@
   >
     <div class="sidebar-header">
       <div class="brand" [class.collapsed]="sidebarCollapsed()">
-        <svg lucideLayoutDashboard class="brand-icon" aria-hidden="true"></svg>
+        <img src="logo.png" alt="Assas" class="brand-logo" />
         @if (!sidebarCollapsed()) {
-          <span class="brand-text">Remote Work Supervisor</span>
+          <div class="brand-text-wrap">
+            <span class="brand-name">Assas</span>
+            <span class="brand-sub">The Guardian</span>
+          </div>
         }
       </div>
       <button class="collapse-toggle" type="button" (click)="toggleSidebar()"

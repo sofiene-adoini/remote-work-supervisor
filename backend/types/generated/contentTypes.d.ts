@@ -586,6 +586,7 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
     status: Schema.Attribute.Enumeration<['active', 'archived']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'active'>;
+    team: Schema.Attribute.Relation<'manyToOne', 'api::team.team'>;
     timeEntries: Schema.Attribute.Relation<
       'oneToMany',
       'api::time-entry.time-entry'
@@ -683,9 +684,14 @@ export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::team.team'> &
       Schema.Attribute.Private;
+    manager: Schema.Attribute.Relation<
+      'oneToOne',
+      'plugin::users-permissions.user'
+    >;
     name: Schema.Attribute.String &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
+    projects: Schema.Attribute.Relation<'oneToMany', 'api::project.project'>;
     publishedAt: Schema.Attribute.DateTime;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -1219,6 +1225,7 @@ export interface PluginUsersPermissionsUser
       'plugin::users-permissions.user'
     > &
       Schema.Attribute.Private;
+    managedTeam: Schema.Attribute.Relation<'oneToOne', 'api::team.team'>;
     overtimeDeclarations: Schema.Attribute.Relation<
       'oneToMany',
       'api::overtime-declaration.overtime-declaration'

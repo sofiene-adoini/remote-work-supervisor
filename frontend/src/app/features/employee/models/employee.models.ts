@@ -67,6 +67,20 @@ export interface HrStats {
   totalHoursToday: number;
 }
 
+export interface SessionWithWorked extends Session {
+  workedMinutes: number;
+}
+
+export interface SessionHistoryResponse {
+  sessions: SessionWithWorked[];
+}
+
+export interface TodayDetailResponse {
+  sessions: SessionWithWorked[];
+  totalWorkedMinutes: number;
+  totalBreakMinutes: number;
+}
+
 export interface TeamMember {
   id: number;
   fullName: string;
