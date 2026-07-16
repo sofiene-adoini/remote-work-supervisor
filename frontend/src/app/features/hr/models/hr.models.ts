@@ -19,7 +19,7 @@ export interface HrTeamMember {
   id: number;
   fullName: string;
   email: string;
-  status: 'active' | 'break' | 'clocked_out';
+  status: 'active' | 'break' | 'idle' | 'clocked_out';
   hoursToday: number;
   team?: { id: number; name: string } | null;
 }

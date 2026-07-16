@@ -1,22 +1,64 @@
 import type { Core } from '@strapi/strapi';
+import { Server } from 'socket.io';
+
+const USER_UID = 'plugin::users-permissions.user';
 
 export default {
-  /**
-   * An asynchronous register function that runs before
-   * your application is initialized.
-   *
-   * This gives you an opportunity to extend code.
-   */
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
 
-  /**
-   * An asynchronous bootstrap function that runs before
-   * your application gets started.
-   *
-   * This gives you an opportunity to set up your data model,
-   * run jobs, or perform some special logic.
-   */
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    // ── Socket.IO ────────────────────────────────────────────────────
+    const origins = process.env.CORS_ORIGIN?.split(',') ?? ['http://localhost:4200'];
+    const io = new Server(strapi.server.httpServer as any, {
+      cors: { origin: origins, credentials: true },
+    });
+
+    io.use(async (socket, next) => {
+      try {
+        const token = socket.handshake.auth?.token;
+        if (!token) return next(new Error('Missing auth token'));
+
+        const jwtService = strapi.plugin('users-permissions').service('jwt');
+        const decoded = await jwtService.verify(token);
+        const user = await strapi.db.query(USER_UID).findOne({
+          where: { id: decoded.id },
+          populate: ['role', 'team'],
+        });
+
+        if (!user || user.isActive === false) return next(new Error('Invalid user'));
+
+        (socket as any).user = user;
+        next();
+      } catch {
+        next(new Error('Authentication failed'));
+      }
+    });
+
+    io.on('connection', (socket) => {
+      const user = (socket as any).user;
+      const roleName = user.role?.name;
+
+      strapi.log.info(`[Realtime] user=${user.id} (${user.fullName}) role=${roleName} connected`);
+
+      socket.join(`user:${user.id}`);
+
+      if (user.team?.id) {
+        socket.join(`team:${user.team.id}`);
+      }
+
+      if (roleName === 'HR' || roleName === 'Admin') {
+        socket.join('company');
+      }
+
+      socket.on('disconnect', () => {
+        strapi.log.info(`[Realtime] user=${user.id} disconnected`);
+      });
+    });
+
+    (strapi as any).io = io;
+    strapi.log.info(`[Realtime] Socket.IO server ready`);
+
+    // ── Role seeding (existing) ──────────────────────────────────────
     const pluginStore = strapi.store({ type: 'plugin', name: 'users-permissions' });
     const advanced = ((await pluginStore.get({ key: 'advanced' })) ?? {}) as Record<string, unknown>;
 

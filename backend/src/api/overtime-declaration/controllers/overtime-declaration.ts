@@ -1,6 +1,20 @@
 import type { Context } from 'koa';
 const OT_UID = 'api::overtime-declaration.overtime-declaration';
 
+function emitOvertimeChanged(updated: any) {
+  const io = (strapi as any).io;
+  if (!io) return;
+
+  const payload = {
+    declarationId: updated.id,
+    userId: updated.user,
+    status: updated.status,
+  };
+
+  io.to('company').emit('overtime:status-changed', payload);
+  io.to(`user:${updated.user}`).emit('overtime:status-changed', payload);
+}
+
 export default {
   async myDeclarations(ctx: Context) {
     const userId = ctx.state.user?.id;
@@ -79,6 +93,8 @@ export default {
       data: { status: 'approved' },
     });
 
+    emitOvertimeChanged(updated);
+
     return ctx.send({ declaration: updated });
   },
 
@@ -96,6 +112,8 @@ export default {
       where: { id: declaration.id },
       data: { status: 'rejected' },
     });
+
+    emitOvertimeChanged(updated);
 
     return ctx.send({ declaration: updated });
   },

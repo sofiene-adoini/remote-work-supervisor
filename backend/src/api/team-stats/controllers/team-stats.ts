@@ -9,16 +9,25 @@ export default {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Total employees (role = Employee)
-    const totalEmployees = await strapi.db.query(USER_UID).count({
-      where: { role: { name: 'Employee' } },
+    // Total employees (role = Employee or Manager)
+    const employees = await strapi.db.query(USER_UID).findMany({
+      where: {
+        $or: [
+          { role: { name: 'Employee' } },
+          { role: { name: 'Manager' } },
+        ],
+      },
+      populate: ['role'],
     });
+    const totalEmployees = employees.length;
 
     // Today's sessions — get all sessions started today
-    const todaySessions = await strapi.db.query(SESSION_UID).findMany({
-      where: { clockIn: { $gte: today.toISOString() } },
-      orderBy: { clockIn: 'desc' },
-    });
+   const todaySessions = await strapi.db.query(SESSION_UID).findMany({
+  where: { clockIn: { $gte: today.toISOString() } },
+  populate: ['user'],
+  orderBy: { clockIn: 'desc' },
+
+});
 
     // Get the latest session per user to determine current status
     const latestByUser = new Map<number, any>();
@@ -42,11 +51,12 @@ export default {
     const idleFlagged = totalEmployees - employeesWithSession;
 
     // Total hours worked today across all sessions
+    const nowMs = Date.now();
     let totalHoursToday = 0;
     for (const session of todaySessions) {
       if (session.clockIn) {
         const start = new Date(session.clockIn).getTime();
-        const end = session.clockOut ? new Date(session.clockOut).getTime() : today.getTime();
+        const end = session.clockOut ? new Date(session.clockOut).getTime() : nowMs;
         const minutes = (end - start) / 60000;
         const breakMin = session.totalBreakMinutes || 0;
         totalHoursToday += Math.max(0, (minutes - breakMin) / 60);
