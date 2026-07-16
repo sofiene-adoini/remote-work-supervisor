@@ -1,6 +1,7 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe, TitleCasePipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
   LucideTimer, LucideCalendarClock, LucideBell, LucideArrowRight,
@@ -11,11 +12,12 @@ import { HrTeamsService } from '../services/hr-teams.service';
 import { HrOvertimeService } from '../services/hr-overtime.service';
 import { HrAlertsService } from '../services/hr-alerts.service';
 import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '../models/hr.models';
+import { RealtimeService, SessionStatusEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-hr-dashboard',
   imports: [
-    RouterLink, DatePipe, TitleCasePipe,
+    RouterLink, DatePipe,
     LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
     LucideTimer, LucideCalendarClock, LucideBell, LucideArrowRight,
     LucideCheck, LucideXCircle,
@@ -80,7 +82,12 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
                   </div>
                   <span class="status-badge" [class]="'status-' + member.status">
                     <span class="status-dot-sm"></span>
-                    {{ member.status === 'clocked_out' ? 'Offline' : (member.status | titlecase) }}
+                    @switch (member.status) {
+                      @case ('active') { Active }
+                      @case ('break') { On Break }
+                      @case ('idle') { Idle }
+                      @default { Offline }
+                    }
                   </span>
                 </div>
               }
@@ -372,6 +379,11 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
       color: var(--rws-text-muted);
     }
 
+    .status-idle {
+      background: #fde8e8;
+      color: #b91c1c;
+    }
+
     .status-dot-sm {
       width: 6px;
       height: 6px;
@@ -380,6 +392,7 @@ import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '
       .status-active & { background: #1fb6a6; }
       .status-break & { background: #d9973b; }
       .status-clocked_out & { background: #9ca3af; }
+      .status-idle & { background: #d64545; }
     }
 
     /* ── Overtime List ─────────────────────────────────────── */
@@ -561,6 +574,8 @@ export class HrDashboardComponent implements OnInit {
   private readonly teamsService = inject(HrTeamsService);
   private readonly overtimeService = inject(HrOvertimeService);
   private readonly alertsService = inject(HrAlertsService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly stats = signal<HrDashboardStats | null>(null);
   protected readonly statsLoading = signal(true);
@@ -584,6 +599,56 @@ export class HrDashboardComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.loadAll();
+    this.subscribeToRealtime();
+  }
+
+  private subscribeToRealtime(): void {
+    this.realtime.sessionChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
+      this.patchMemberStatus(event.userId, event.status);
+      this.patchMemberHours(event.userId, event);
+      this.refreshStatsFromApi();
+    });
+
+    this.realtime.overtimeChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
+      if (event.status !== 'pending') {
+        this.pendingOvertime.update((list) => list.filter((d) => d.id !== event.declarationId));
+        this.refreshStatsFromApi();
+      }
+    });
+  }
+
+  private refreshStatsFromApi(): void {
+    this.statsService.getDashboardStats().subscribe({
+      next: (res) => this.stats.set(res),
+    });
+  }
+
+  private patchMemberStatus(userId: number, newStatus: string): void {
+    this.activeMembers.update((list) =>
+      list.map((m) => m.id === userId
+        ? { ...m, status: newStatus as HrTeamMember['status'] }
+        : m,
+      ),
+    );
+  }
+
+  private patchMemberHours(userId: number, event: SessionStatusEvent): void {
+    const member = this.activeMembers().find((m) => m.id === userId);
+    if (!member) return;
+
+    const start = new Date(event.clockIn).getTime();
+    const end = event.clockOut ? new Date(event.clockOut).getTime() : Date.now();
+    const breakMin = event.totalBreakMinutes || 0;
+    const workedMin = Math.max(0, (end - start) / 60000 - breakMin);
+    const hoursToday = Math.round((workedMin / 60) * 10) / 10;
+
+    this.activeMembers.update((list) =>
+      list.map((m) => m.id === userId ? { ...m, hoursToday } : m),
+    );
+  }
+
+  private loadAll(): void {
     this.loadStats();
     this.loadMembers();
     this.loadPendingOvertime();
@@ -632,19 +697,13 @@ export class HrDashboardComponent implements OnInit {
 
   handleApprove(id: number): void {
     this.overtimeService.approve(id).subscribe({
-      next: () => {
-        this.pendingOvertime.update((list) => list.filter((d) => d.id !== id));
-        this.stats.update((s) => s ? { ...s, pendingOvertime: Math.max(0, s.pendingOvertime - 1) } : s);
-      },
+      next: () => this.loadAll(),
     });
   }
 
   handleReject(id: number): void {
     this.overtimeService.reject(id).subscribe({
-      next: () => {
-        this.pendingOvertime.update((list) => list.filter((d) => d.id !== id));
-        this.stats.update((s) => s ? { ...s, pendingOvertime: Math.max(0, s.pendingOvertime - 1) } : s);
-      },
+      next: () => this.loadAll(),
     });
   }
 }

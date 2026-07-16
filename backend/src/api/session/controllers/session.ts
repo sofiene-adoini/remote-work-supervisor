@@ -1,9 +1,34 @@
-import type { Core } from '@strapi/strapi';
 import type { Context } from 'koa';
 const SESSION_UID = 'api::session.session';
+const USER_UID = 'plugin::users-permissions.user';
+
+function emitSessionChanged(updated: any, userId: number) {
+  const io = (strapi as any).io;
+  if (!io) return;
+
+  const payload = {
+    userId,
+    status: updated.status,
+    clockIn: updated.clockIn,
+    clockOut: updated.clockOut ?? null,
+    totalBreakMinutes: updated.totalBreakMinutes ?? 0,
+  };
+
+  io.to('company').emit('session:status-changed', payload);
+  io.to(`user:${userId}`).emit('session:status-changed', payload);
+
+  strapi.db.query(USER_UID).findOne({
+    where: { id: userId },
+    populate: ['team'],
+  }).then((user: any) => {
+    if (user?.team?.id) {
+      io.to(`team:${user.team.id}`).emit('session:status-changed', payload);
+    }
+  }).catch(() => {});
+}
 
 export default {
-  async currentStatus(ctx:Context) {
+  async currentStatus(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -25,7 +50,7 @@ export default {
     return ctx.send({ status: session.status, session });
   },
 
-  async clockIn(ctx:Context) {
+  async clockIn(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -53,10 +78,12 @@ export default {
       },
     });
 
+    emitSessionChanged(session, userId);
+
     return ctx.send({ session });
   },
 
-  async clockOut(ctx:Context) {
+  async clockOut(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -85,10 +112,12 @@ export default {
       },
     });
 
+    emitSessionChanged(updated, userId);
+
     return ctx.send({ session: updated });
   },
 
-  async startBreak(ctx:Context) {
+  async startBreak(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -116,10 +145,12 @@ export default {
       },
     });
 
+    emitSessionChanged(updated, userId);
+
     return ctx.send({ session: updated });
   },
 
-  async endBreak(ctx:Context) {
+  async endBreak(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -152,10 +183,12 @@ export default {
       },
     });
 
+    emitSessionChanged(updated, userId);
+
     return ctx.send({ session: updated });
   },
 
-  async history(ctx:Context) {
+  async history(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -201,7 +234,7 @@ export default {
     return ctx.send({ sessions: enriched });
   },
 
-  async todayDetail(ctx:Context) {
+  async todayDetail(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
@@ -238,7 +271,7 @@ export default {
     });
   },
 
-  async weeklyHours(ctx:Context) {
+  async weeklyHours(ctx: Context) {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 

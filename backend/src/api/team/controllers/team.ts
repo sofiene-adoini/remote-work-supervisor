@@ -41,6 +41,7 @@ export default {
         user: { id: { $in: userIds } },
         clockIn: { $gte: today.toISOString() },
       },
+      populate: ['user'],
       orderBy: { clockIn: 'desc' },
     });
 
@@ -263,44 +264,61 @@ export default {
     return ctx.send({ team: updated });
   },
 
-  async allMembers(ctx: Context) {
-    const users = await strapi.db.query(USER_UID).findMany({
-      where: { role: { name: 'Employee' } },
-      orderBy: { fullName: 'asc' },
-    });
+async allMembers(ctx: Context) {
+  const users = await strapi.db.query(USER_UID).findMany({
+    where: {
+      $or: [
+        { role: { name: 'Employee' } },
+        { role: { name: 'Manager' } },
+      ],
+    },
+    populate: ['role'],
+    orderBy: { fullName: 'asc' },
+  });
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-    const userIds = users.map((u) => u.id);
+  const allTodaySessions = await strapi.db.query(SESSION_UID).findMany({
+    where: {
+      clockIn: { $gte: today.toISOString() },
+    },
+    populate: ['user'],
+    orderBy: { clockIn: 'desc' },
+  });
 
-    const sessions = userIds.length > 0
-      ? await strapi.db.query(SESSION_UID).findMany({
-          where: {
-            user: { id: { $in: userIds } },
-            clockIn: { $gte: today.toISOString() },
-          },
-          orderBy: { clockIn: 'desc' },
-        })
-      : [];
-
-    const latestByUser = new Map<number, any>();
-    for (const s of sessions) {
-      const uid = typeof s.user === 'object' ? s.user.id : s.user;
-      if (!latestByUser.has(uid)) latestByUser.set(uid, s);
+    const sessionsByUser = new Map<number, any[]>();
+    for (const s of allTodaySessions) {
+      const uid = typeof s.user === 'object' ? s.user?.id : s.user;
+      if (!uid) continue;
+      if (!sessionsByUser.has(uid)) sessionsByUser.set(uid, []);
+      sessionsByUser.get(uid)!.push(s);
     }
 
-    const result = users.map((user) => {
-      const session = latestByUser.get(user.id);
-      let status: string = 'clocked_out';
+    const now = Date.now();
+
+    const result = users.map((user: any) => {
+      const userSessions = sessionsByUser.get(user.id) || [];
+      let status: string = 'idle';
       let hoursToday = 0;
 
-      if (session) {
-        status = session.status === 'completed' ? 'clocked_out' : session.status;
-        const start = new Date(session.clockIn).getTime();
-        const end = session.clockOut ? new Date(session.clockOut).getTime() : Date.now();
-        const breakMin = session.totalBreakMinutes || 0;
-        hoursToday = Math.max(0, ((end - start) / 60000 - breakMin) / 60);
+      if (userSessions.length > 0) {
+        const latest = userSessions[0];
+        status = latest.status === 'completed' ? 'clocked_out' : latest.status;
+
+        for (const s of userSessions) {
+          const start = new Date(s.clockIn).getTime();
+          const end = s.clockOut ? new Date(s.clockOut).getTime() : now;
+          const breakMin = s.totalBreakMinutes || 0;
+
+          if (!s.clockOut && s.status === 'break' && s.breakStart) {
+            const activeBreakMs = now - new Date(s.breakStart).getTime();
+            const totalBreakMs = (breakMin * 60000) + activeBreakMs;
+            hoursToday += Math.max(0, ((end - start) / 60000 - totalBreakMs / 60000) / 60);
+          } else {
+            hoursToday += Math.max(0, ((end - start) / 60000 - breakMin) / 60);
+          }
+        }
       }
 
       return {
@@ -309,9 +327,10 @@ export default {
         email: user.email,
         status,
         hoursToday: Math.round(hoursToday * 10) / 10,
-        team: (user as any).team ?? null,
       };
     });
+
+    strapi.log.info(`[allMembers] users=${users.length} sessions=${allTodaySessions.length} sessionUserIds=[${Array.from(sessionsByUser.keys())}]`);
 
     return ctx.send({ members: result });
   },

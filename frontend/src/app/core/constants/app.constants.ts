@@ -1,2 +1,3 @@
 export const APP_NAME = 'Assas';
 export const API_BASE_PATH = '/api';
+export const API_BASE_URL = 'http://localhost:1337';
