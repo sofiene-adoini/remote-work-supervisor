@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { LucideUsers, LucidePlus, LucideX, LucideArrowRight } from '@lucide/angular';
 import { HrTeamsService } from '../services/hr-teams.service';
-import { HrTeam, HrManager, HrUnassignedEmployee } from '../models/hr.models';
+import { HrTeam, HrUnassignedEmployee } from '../models/hr.models';
 
 @Component({
   selector: 'app-hr-teams',
@@ -64,20 +64,6 @@ import { HrTeam, HrManager, HrUnassignedEmployee } from '../models/hr.models';
             <div class="form-group">
               <label class="form-label" for="team-name">Team Name</label>
               <input class="form-input" id="team-name" type="text" [(ngModel)]="name" placeholder="e.g. Engineering">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Manager</label>
-              @if (managers().length === 0) {
-                <p class="form-hint">No available managers</p>
-              } @else {
-                <select class="form-input" [(ngModel)]="selectedManagerId">
-                  <option [ngValue]="null">-- None --</option>
-                  @for (mgr of managers(); track mgr.id) {
-                    <option [ngValue]="mgr.id">{{ mgr.fullName }} ({{ mgr.email }})</option>
-                  }
-                </select>
-              }
             </div>
 
             <div class="form-group">
@@ -344,9 +330,7 @@ export class HrTeamsComponent implements OnInit {
 
   protected readonly dialogOpen = signal(false);
   protected name = '';
-  protected selectedManagerId: number | null = null;
   protected readonly selectedMemberIds = signal<Set<number>>(new Set());
-  protected readonly managers = signal<HrManager[]>([]);
   protected readonly unassignedEmployees = signal<HrUnassignedEmployee[]>([]);
   protected readonly submitting = signal(false);
   protected readonly error = signal('');
@@ -368,15 +352,9 @@ export class HrTeamsComponent implements OnInit {
 
   openDialog(): void {
     this.name = '';
-    this.selectedManagerId = null;
     this.selectedMemberIds.set(new Set());
     this.error.set('');
     this.dialogOpen.set(true);
-
-    this.teamsService.getAvailableManagers().subscribe({
-      next: (res) => this.managers.set(res.managers),
-      error: () => this.managers.set([]),
-    });
 
     this.teamsService.getUnassignedEmployees().subscribe({
       next: (res) => this.unassignedEmployees.set(res.employees),
@@ -413,7 +391,6 @@ export class HrTeamsComponent implements OnInit {
     this.submitting.set(true);
     this.teamsService.createTeam({
       name: this.name.trim(),
-      ...(this.selectedManagerId != null ? { managerId: this.selectedManagerId } : {}),
       ...(memberIds.length > 0 ? { memberIds } : {}),
     }).subscribe({
       next: () => {

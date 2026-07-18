@@ -72,10 +72,10 @@ export class DashboardLayoutComponent {
   protected readonly sidebarWidth = computed(() => (this.sidebarCollapsed() ? '64px' : '268px'));
 
   protected readonly allNavItems: NavItem[] = [
-    { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/employee/dashboard', roles: ['Employee', 'Manager'] },
-    { label: 'My Time', icon: LucideClock, path: '/employee/time', roles: ['Employee', 'Manager'] },
-    { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee', 'Manager'] },
-    { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee', 'Manager'] },
+    { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/employee/dashboard', roles: ['Employee'] },
+    { label: 'My Time', icon: LucideClock, path: '/employee/time', roles: ['Employee'] },
+    { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee'] },
+    { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee'] },
     { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
     { label: 'Members', icon: LucideUser, path: '/hr/members', roles: ['HR', 'Admin'] },
     { label: 'Teams', icon: LucideUsersRound, path: '/hr/teams', roles: ['HR', 'Admin'] },
@@ -97,7 +97,7 @@ export class DashboardLayoutComponent {
 
   protected readonly isEmployee = computed(() => {
     const role = this.userRole();
-    return role === 'Employee' || role === 'Manager';
+    return role === 'Employee';
   });
 
   constructor() {

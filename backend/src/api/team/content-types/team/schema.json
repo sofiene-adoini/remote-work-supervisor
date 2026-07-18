@@ -15,12 +15,6 @@
       "required": true,
       "unique": true
     },
-    "manager": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "plugin::users-permissions.user",
-      "inversedBy": "managedTeam"
-    },
     "users": {
       "type": "relation",
       "relation": "oneToMany",

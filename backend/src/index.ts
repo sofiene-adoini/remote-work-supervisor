@@ -73,7 +73,6 @@ export default {
 
     const roles = [
       { name: 'Employee', type: 'employee', description: 'Employee dashboard access.' },
-      { name: 'Manager', type: 'manager', description: 'Manager dashboard access.' },
       { name: 'HR', type: 'hr', description: 'Human resources dashboard access.' },
       { name: 'Admin', type: 'admin', description: 'Administrative HR access.' },
     ];
