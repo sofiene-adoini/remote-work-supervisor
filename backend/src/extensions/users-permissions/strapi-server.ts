@@ -15,10 +15,10 @@ const PASSWORD_PATTERN = /^(?=.*\d).{10,}$/;
  * Roles that may be assigned to a newly invited user via the HR/Admin invite flow.
  * `Admin` (and Strapi's built-in `super-admin` authenticated role) are intentionally
  * excluded so an HR user cannot escalate privileges by inviting an Admin account.
- * HR may only assign: Employee, Manager, or HR.
+ * HR may only assign: Employee or HR.
  * Admin (calling the endpoint) may additionally assign the `Admin` role.
  */
-const INVITABLE_ROLE_TYPES_HR = new Set(['employee', 'manager', 'hr']);
+const INVITABLE_ROLE_TYPES_HR = new Set(['employee', 'hr']);
 const SUPER_ADMIN_TYPE = 'super-admin';
 
 const publicProfile = (user: any) => ({
@@ -99,12 +99,6 @@ plugin.contentTypes.user.schema.attributes.projects = {
   mappedBy: 'users',
 };
 
-plugin.contentTypes.user.schema.attributes.managedTeam = {
-  type: 'relation',
-  relation: 'oneToOne',
-  target: 'api::team.team',
-  mappedBy: 'manager',
-};
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';
@@ -202,8 +196,8 @@ plugin.contentTypes.user.schema.attributes.managedTeam = {
         if (!roleIsInvitable) {
           return ctx.forbidden(
             inviterIsAdmin
-              ? 'Admin can only assign Employee, Manager, HR, or Admin roles.'
-              : 'HR can only assign Employee, Manager, or HR roles.',
+              ? 'Admin can only assign Employee, HR, or Admin roles.'
+              : 'HR can only assign Employee or HR roles.',
           );
         }
 

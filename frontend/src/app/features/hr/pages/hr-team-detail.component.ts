@@ -2,13 +2,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TitleCasePipe } from '@angular/common';
-import { LucideUsers, LucidePlus, LucideX, LucideUser, LucideArrowLeft } from '@lucide/angular';
+import { LucideUsers, LucidePlus, LucideX, LucideArrowLeft } from '@lucide/angular';
 import { HrTeamsService } from '../services/hr-teams.service';
-import { HrTeamMember, HrManager, HrUnassignedEmployee, HrTeam } from '../models/hr.models';
+import { HrTeamMember, HrUnassignedEmployee } from '../models/hr.models';
 
 @Component({
   selector: 'app-hr-team-detail',
-  imports: [FormsModule, RouterLink, TitleCasePipe, LucideUsers, LucidePlus, LucideX, LucideUser, LucideArrowLeft],
+  imports: [FormsModule, RouterLink, TitleCasePipe, LucideUsers, LucidePlus, LucideX, LucideArrowLeft],
   template: `
     <div class="page-container">
       <div class="page-header">
@@ -19,24 +19,11 @@ import { HrTeamMember, HrManager, HrUnassignedEmployee, HrTeam } from '../models
           <h2 class="page-heading">{{ team()?.name ?? 'Team' }}</h2>
         </div>
         <div class="header-actions">
-          <button class="btn btn-secondary" type="button" (click)="openManagerDialog()">
-            <svg lucideUser class="icon-sm" aria-hidden="true"></svg>
-            Change Manager
-          </button>
           <button class="btn btn-primary" type="button" (click)="openAddMembersDialog()">
             <svg lucidePlus class="icon-sm" aria-hidden="true"></svg>
             Add Members
           </button>
         </div>
-      </div>
-
-      <div class="manager-section">
-        <span class="manager-label">Manager:</span>
-        @if (team()?.manager) {
-          <span class="manager-name">{{ team()!.manager!.fullName }}</span>
-        } @else {
-          <span class="manager-none">None assigned</span>
-        }
       </div>
 
       @if (loading()) {
@@ -132,56 +119,6 @@ import { HrTeamMember, HrManager, HrUnassignedEmployee, HrTeam } from '../models
         </div>
       }
 
-      @if (managerDialogOpen()) {
-        <div class="dialog-overlay" (click)="closeManagerDialog()"></div>
-        <div class="dialog" role="dialog" aria-modal="true" aria-label="Change Manager">
-          <div class="dialog-header">
-            <h2 class="dialog-title">Change Manager</h2>
-            <button class="dialog-close" type="button" (click)="closeManagerDialog()" aria-label="Close">
-              <svg lucideX class="icon-sm" aria-hidden="true"></svg>
-            </button>
-          </div>
-          <div class="dialog-body">
-            @if (availableManagers().length === 0 && !team()?.manager) {
-              <p class="form-hint">No available managers</p>
-            } @else {
-              <div class="manager-radio-list">
-                <label class="manager-radio">
-                  <input type="radio" name="manager" [value]="null" [(ngModel)]="selectedManagerRadioId">
-                  <span class="manager-radio-text">None</span>
-                </label>
-                @if (team()?.manager) {
-                  <label class="manager-radio">
-                    <input type="radio" name="manager" [value]="team()!.manager!.id" [(ngModel)]="selectedManagerRadioId">
-                    <span class="manager-radio-text">
-                      <span class="avatar-xs">{{ team()!.manager!.fullName.charAt(0) }}</span>
-                      {{ team()!.manager!.fullName }} (current)
-                    </span>
-                  </label>
-                }
-                @for (mgr of availableManagers(); track mgr.id) {
-                  <label class="manager-radio">
-                    <input type="radio" name="manager" [value]="mgr.id" [(ngModel)]="selectedManagerRadioId">
-                    <span class="manager-radio-text">
-                      <span class="avatar-xs">{{ mgr.fullName.charAt(0) }}</span>
-                      {{ mgr.fullName }}
-                    </span>
-                  </label>
-                }
-              </div>
-            }
-            @if (managerError()) {
-              <p class="form-error">{{ managerError() }}</p>
-            }
-          </div>
-          <div class="dialog-footer">
-            <button class="btn btn-secondary" type="button" (click)="closeManagerDialog()">Cancel</button>
-            <button class="btn btn-primary" type="button" (click)="submitManagerChange()" [disabled]="managerSubmitting()">
-              {{ managerSubmitting() ? 'Saving...' : 'Save' }}
-            </button>
-          </div>
-        </div>
-      }
     </div>
   `,
   styles: [`
@@ -224,22 +161,6 @@ import { HrTeamMember, HrManager, HrUnassignedEmployee, HrTeam } from '../models
 
     .icon-sm { width: 16px; height: 16px; }
     .icon-xs { width: 12px; height: 12px; }
-
-    .manager-section {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 1.25rem;
-      padding: 0.75rem 1rem;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-      font-size: 0.875rem;
-    }
-
-    .manager-label { font-weight: 600; color: var(--rws-text-muted); }
-    .manager-name { font-weight: 600; color: var(--rws-text); }
-    .manager-none { color: var(--rws-text-muted); font-style: italic; }
 
     .card {
       background: #fff;
@@ -449,32 +370,6 @@ import { HrTeamMember, HrManager, HrUnassignedEmployee, HrTeam } from '../models
 
     .member-name { font-size: 0.875rem; font-weight: 500; color: var(--rws-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    .manager-radio-list {
-      border: 1px solid var(--rws-border);
-      border-radius: var(--rws-radius);
-    }
-
-    .manager-radio {
-      display: flex;
-      align-items: center;
-      gap: 0.625rem;
-      padding: 0.625rem 0.75rem;
-      cursor: pointer;
-      transition: background 150ms ease;
-
-      &:hover { background: #fafbfc; }
-      & + & { border-top: 1px solid var(--rws-border); }
-    }
-
-    .manager-radio-text {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--rws-text);
-    }
-
     .btn {
       display: inline-flex;
       align-items: center;
@@ -513,20 +408,15 @@ export class HrTeamDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly teamsService = inject(HrTeamsService);
 
-  protected readonly team = signal<{ id: number; name: string; manager: { id: number; fullName: string; email: string } | null } | null>(null);
+  protected readonly team = signal<{ id: number; name: string } | null>(null);
   protected readonly members = signal<HrTeamMember[]>([]);
   protected readonly loading = signal(true);
 
   protected readonly addMembersDialogOpen = signal(false);
-  protected readonly managerDialogOpen = signal(false);
   protected readonly unassignedEmployees = signal<HrUnassignedEmployee[]>([]);
-  protected readonly availableManagers = signal<HrManager[]>([]);
   protected readonly addSelectedMemberIds = signal<Set<number>>(new Set());
   protected readonly addSubmitting = signal(false);
   protected readonly addError = signal('');
-  protected selectedManagerRadioId: number | null = null;
-  protected readonly managerSubmitting = signal(false);
-  protected readonly managerError = signal('');
 
   private teamId = 0;
 
@@ -541,7 +431,7 @@ export class HrTeamDetailComponent implements OnInit {
       next: (res) => {
         const found = res.teams.find((t) => t.id === this.teamId);
         if (found) {
-          this.team.set({ id: found.id, name: found.name, manager: null });
+          this.team.set({ id: found.id, name: found.name });
         }
       },
     });
@@ -607,38 +497,6 @@ export class HrTeamDetailComponent implements OnInit {
   removeMember(memberId: number): void {
     this.teamsService.updateTeamMembers(this.teamId, { removeMemberIds: [memberId] }).subscribe({
       next: () => this.loadTeamData(),
-    });
-  }
-
-  openManagerDialog(): void {
-    this.selectedManagerRadioId = this.team()?.manager?.id ?? null;
-    this.managerError.set('');
-    this.managerDialogOpen.set(true);
-
-    this.teamsService.getAvailableManagers().subscribe({
-      next: (res) => this.availableManagers.set(res.managers),
-      error: () => this.availableManagers.set([]),
-    });
-  }
-
-  closeManagerDialog(): void {
-    this.managerDialogOpen.set(false);
-  }
-
-  submitManagerChange(): void {
-    this.managerError.set('');
-    this.managerSubmitting.set(true);
-
-    this.teamsService.updateTeamManager(this.teamId, { managerId: this.selectedManagerRadioId }).subscribe({
-      next: (res) => {
-        this.managerSubmitting.set(false);
-        this.team.update((t) => t ? { ...t, manager: res.team.manager ?? null } : t);
-        this.closeManagerDialog();
-      },
-      error: (err) => {
-        this.managerSubmitting.set(false);
-        this.managerError.set(err.error?.error?.message || 'Failed to update manager');
-      },
     });
   }
 }

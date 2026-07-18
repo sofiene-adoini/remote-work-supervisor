@@ -44,12 +44,6 @@ export interface HrAlert {
   createdAt: string;
 }
 
-export interface HrManager {
-  id: number;
-  fullName: string;
-  email: string;
-}
-
 export interface HrUnassignedEmployee {
   id: number;
   fullName: string;
@@ -60,7 +54,6 @@ export interface HrUnassignedEmployee {
 export interface HrTeamDetail {
   id: number;
   name: string;
-  manager?: { id: number; fullName: string; email: string } | null;
   users: { id: number; fullName: string; email: string }[];
 }
 

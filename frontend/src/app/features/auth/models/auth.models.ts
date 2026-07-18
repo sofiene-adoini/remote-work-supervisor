@@ -1,6 +1,6 @@
 export interface AuthRole {
   id: number;
-  name: 'Employee' | 'Manager' | 'HR' | 'Admin' | string;
+  name: 'Employee' | 'HR' | 'Admin' | string;
   type?: string;
 }
 

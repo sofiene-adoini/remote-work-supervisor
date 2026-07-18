@@ -9,27 +9,20 @@ export default {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Total employees (role = Employee or Manager)
     const employees = await strapi.db.query(USER_UID).findMany({
       where: {
-        $or: [
-          { role: { name: 'Employee' } },
-          { role: { name: 'Manager' } },
-        ],
+        role: { name: 'Employee' },
       },
       populate: ['role'],
     });
     const totalEmployees = employees.length;
 
-    // Today's sessions — get all sessions started today
-   const todaySessions = await strapi.db.query(SESSION_UID).findMany({
-  where: { clockIn: { $gte: today.toISOString() } },
-  populate: ['user'],
-  orderBy: { clockIn: 'desc' },
+    const todaySessions = await strapi.db.query(SESSION_UID).findMany({
+      where: { clockIn: { $gte: today.toISOString() } },
+      populate: ['user'],
+      orderBy: { clockIn: 'desc' },
+    });
 
-});
-
-    // Get the latest session per user to determine current status
     const latestByUser = new Map<number, any>();
     for (const s of todaySessions) {
       const uid = typeof s.user === 'object' ? s.user.id : s.user;
@@ -46,11 +39,9 @@ export default {
       else if (session.status === 'completed') clockedOut++;
     }
 
-    // Employees who have no session at all today → idle/flagged
     const employeesWithSession = latestByUser.size;
     const idleFlagged = totalEmployees - employeesWithSession;
 
-    // Total hours worked today across all sessions
     const nowMs = Date.now();
     let totalHoursToday = 0;
     for (const session of todaySessions) {
@@ -63,12 +54,10 @@ export default {
       }
     }
 
-    // Pending overtime declarations
     const pendingOvertime = await strapi.db.query(OT_UID).count({
       where: { status: 'pending' },
     });
 
-    // Unread alerts across all users
     const unreadAlerts = await strapi.db.query(ALERT_UID).count({
       where: { read: false },
     });

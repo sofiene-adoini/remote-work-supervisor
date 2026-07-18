@@ -22,6 +22,8 @@ export default {
   async members(ctx: Context) {
     const { teamId } = ctx.params;
 
+    if (!teamId) return ctx.badRequest('teamId is required');
+
     const team = await strapi.db.query(TEAM_UID).findOne({
       where: { id: parseInt(teamId, 10) },
       populate: ['users'],
@@ -35,7 +37,6 @@ export default {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get all today's sessions for these users
     const sessions = await strapi.db.query(SESSION_UID).findMany({
       where: {
         user: { id: { $in: userIds } },
@@ -48,7 +49,7 @@ export default {
     const latestByUser = new Map<number, any>();
     for (const s of sessions) {
       const uid = typeof s.user === 'object' ? s.user.id : s.user;
-      if (!latestByUser.has(uid)) latestByUser.set(uid, s);
+      if (uid) latestByUser.set(uid, s);
     }
 
     const members = team.users.map((user: any) => {
@@ -61,7 +62,7 @@ export default {
         const start = new Date(session.clockIn).getTime();
         const end = session.clockOut ? new Date(session.clockOut).getTime() : Date.now();
         const breakMin = session.totalBreakMinutes || 0;
-        hoursToday = Math.max(0, ((end - start) / 60000 - breakMin) / 60);
+        hoursToday = Math.max(0, ((end - start) / 60000) - (breakMin / 60));
       }
 
       return {
@@ -76,32 +77,18 @@ export default {
     return ctx.send({ members });
   },
 
-  async availableManagers(ctx: Context) {
-    const managers = await strapi.db.query(USER_UID).findMany({
-      where: {
-        role: { name: 'Manager' },
-        managedTeam: { id: null },
-      },
-      populate: ['role'],
-      orderBy: { fullName: 'asc' },
-    });
-    return ctx.send({ managers: managers.map((m) => ({ id: m.id, fullName: m.fullName, email: m.email })) });
-  },
-
   async unassignedEmployees(ctx: Context) {
     const employees = await strapi.db.query(USER_UID).findMany({
       where: {
-        $or: [
-          { role: { name: 'Employee' } },
-          { role: { name: 'Manager' } },
-        ],
+        role: { name: 'Employee' },
         team: { id: null },
       },
       populate: ['role'],
       orderBy: { fullName: 'asc' },
     });
+
     return ctx.send({
-      employees: employees.map((e) => ({
+      employees: employees.map((e: any) => ({
         id: e.id,
         fullName: e.fullName,
         email: e.email,
@@ -111,28 +98,13 @@ export default {
   },
 
   async create(ctx: Context) {
-    const { name, managerId, memberIds } = ctx.request.body as {
+    const { name, memberIds } = ctx.request.body as {
       name?: string;
-      managerId?: number;
       memberIds?: number[];
     };
 
     if (!name?.trim()) {
       return ctx.badRequest('Team name is required');
-    }
-
-    if (managerId) {
-      const manager = await strapi.db.query(USER_UID).findOne({
-        where: { id: managerId },
-        populate: ['role', 'managedTeam'],
-      });
-      if (!manager) return ctx.badRequest('Manager not found');
-      if (manager.role?.name !== 'Manager' && manager.role?.name !== 'Admin') {
-        return ctx.badRequest('User must have a Manager or Admin role');
-      }
-      if (manager.managedTeam) {
-        return ctx.badRequest('This manager is already assigned to a team');
-      }
     }
 
     const validMemberIds: number[] = [];
@@ -149,15 +121,8 @@ export default {
     }
 
     const team = await strapi.db.query(TEAM_UID).create({
-      data: { name: name.trim() },
+      data: { name: name?.trim() },
     });
-
-    if (managerId) {
-      await strapi.db.query(TEAM_UID).update({
-        where: { id: team.id },
-        data: { manager: managerId },
-      });
-    }
 
     for (const mid of validMemberIds) {
       await strapi.db.query(USER_UID).update({
@@ -166,12 +131,12 @@ export default {
       });
     }
 
-    const result = await strapi.db.query(TEAM_UID).findOne({
+    const updated = await strapi.db.query(TEAM_UID).findOne({
       where: { id: team.id },
-      populate: ['manager', 'users'],
+      populate: ['users'],
     });
 
-    return ctx.send({ team: result });
+    return ctx.send({ team: updated });
   },
 
   async updateMembers(ctx: Context) {
@@ -209,9 +174,7 @@ export default {
           populate: ['team'],
         });
         if (!user) continue;
-        if (user.team) {
-          return ctx.badRequest(`User ${mid} is already assigned to a team`);
-        }
+        if (user.team) return ctx.badRequest(`User ${mid} is already assigned to a team`);
         await strapi.db.query(USER_UID).update({
           where: { id: mid },
           data: { team: team.id },
@@ -221,81 +184,39 @@ export default {
 
     const updated = await strapi.db.query(TEAM_UID).findOne({
       where: { id: team.id },
-      populate: ['manager', 'users'],
+      populate: ['users'],
     });
-
     return ctx.send({ team: updated });
   },
 
-  async updateManager(ctx: Context) {
-    const { id } = ctx.params;
-    const { managerId } = ctx.request.body as { managerId?: number | null };
-
-    const team = await strapi.db.query(TEAM_UID).findOne({
-      where: { id: parseInt(id, 10) },
-      populate: ['manager'],
-    });
-    if (!team) return ctx.notFound('Team not found');
-
-    if (managerId) {
-      const manager = await strapi.db.query(USER_UID).findOne({
-        where: { id: managerId },
-        populate: ['role', 'managedTeam'],
-      });
-      if (!manager) return ctx.badRequest('Manager not found');
-      if (manager.role?.name !== 'Manager' && manager.role?.name !== 'Admin') {
-        return ctx.badRequest('User must have a Manager or Admin role');
-      }
-      if (manager.managedTeam && manager.managedTeam.id !== team.id) {
-        return ctx.badRequest('This manager is already assigned to another team');
-      }
-    }
-
-    await strapi.db.query(TEAM_UID).update({
-      where: { id: team.id },
-      data: { manager: managerId || null },
+  async allMembers(ctx: Context) {
+    const users = await strapi.db.query(USER_UID).findMany({
+      where: {
+        role: { name: 'Employee' },
+      },
+      populate: ['role'],
+      orderBy: { fullName: 'asc' },
     });
 
-    const updated = await strapi.db.query(TEAM_UID).findOne({
-      where: { id: team.id },
-      populate: ['manager', 'users'],
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const allTodaySessions = await strapi.db.query(SESSION_UID).findMany({
+      where: {
+        clockIn: { $gte: today.toISOString() },
+      },
+      populate: ['user'],
+      orderBy: { clockIn: 'desc' },
     });
-
-    return ctx.send({ team: updated });
-  },
-
-async allMembers(ctx: Context) {
-  const users = await strapi.db.query(USER_UID).findMany({
-    where: {
-      $or: [
-        { role: { name: 'Employee' } },
-        { role: { name: 'Manager' } },
-      ],
-    },
-    populate: ['role'],
-    orderBy: { fullName: 'asc' },
-  });
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const allTodaySessions = await strapi.db.query(SESSION_UID).findMany({
-    where: {
-      clockIn: { $gte: today.toISOString() },
-    },
-    populate: ['user'],
-    orderBy: { clockIn: 'desc' },
-  });
 
     const sessionsByUser = new Map<number, any[]>();
     for (const s of allTodaySessions) {
       const uid = typeof s.user === 'object' ? s.user?.id : s.user;
-      if (!uid) continue;
-      if (!sessionsByUser.has(uid)) sessionsByUser.set(uid, []);
-      sessionsByUser.get(uid)!.push(s);
+      if (uid) {
+        if (!sessionsByUser.has(uid)) sessionsByUser.set(uid, []);
+        sessionsByUser.get(uid)!.push(s);
+      }
     }
-
-    const now = Date.now();
 
     const result = users.map((user: any) => {
       const userSessions = sessionsByUser.get(user.id) || [];
@@ -308,16 +229,10 @@ async allMembers(ctx: Context) {
 
         for (const s of userSessions) {
           const start = new Date(s.clockIn).getTime();
-          const end = s.clockOut ? new Date(s.clockOut).getTime() : now;
+          const end = s.clockOut ? new Date(s.clockOut).getTime() : Date.now();
           const breakMin = s.totalBreakMinutes || 0;
-
-          if (!s.clockOut && s.status === 'break' && s.breakStart) {
-            const activeBreakMs = now - new Date(s.breakStart).getTime();
-            const totalBreakMs = (breakMin * 60000) + activeBreakMs;
-            hoursToday += Math.max(0, ((end - start) / 60000 - totalBreakMs / 60000) / 60);
-          } else {
-            hoursToday += Math.max(0, ((end - start) / 60000 - breakMin) / 60);
-          }
+          const workedMin = Math.max(0, (end - start) / 60000 - breakMin);
+          hoursToday += workedMin;
         }
       }
 
@@ -329,8 +244,6 @@ async allMembers(ctx: Context) {
         hoursToday: Math.round(hoursToday * 10) / 10,
       };
     });
-
-    strapi.log.info(`[allMembers] users=${users.length} sessions=${allTodaySessions.length} sessionUserIds=[${Array.from(sessionsByUser.keys())}]`);
 
     return ctx.send({ members: result });
   },
