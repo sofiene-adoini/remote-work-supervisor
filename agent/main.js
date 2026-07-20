@@ -84,6 +84,10 @@ ipcMain.handle('clock-in', async () => {
     tracker.startTracking({
       onAutoBreakStart: handleAutoBreakStart,
       onAutoBreakEnd: handleAutoBreakEnd,
+      onActivityStateChange: ({ state, idleMs }) => {
+        // Placeholder for future HR-dashboard integration.
+        // The tracker already logs state transitions; nothing else needed here yet.
+      },
     });
     screenshot.startCapturing();
 
