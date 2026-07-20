@@ -19,7 +19,6 @@ async function apiRequest(endpoint, options = {}) {
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  // Only set Content-Type for non-FormData bodies (FormData sets its own boundary)
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
   }
@@ -56,26 +55,9 @@ async function endBreak() {
   return apiRequest('/sessions/break-end', { method: 'POST' });
 }
 
-// ── Screenshot upload ──────────────────────────────────────────────
-// Uses Strapi's built-in upload plugin (POST /api/upload, multipart/form-data).
+// ── ScreenshotAnalysis (metadata only — no screenshot upload) ──────
 
-async function uploadScreenshot(imageBuffer) {
-  const formData = new FormData();
-  formData.append(
-    'files',
-    new Blob([imageBuffer], { type: 'image/png' }),
-    `screenshot-${Date.now()}.png`,
-  );
-
-  return apiRequest('/upload', {
-    method: 'POST',
-    body: formData,
-  });
-}
-
-// ── ScreenshotAnalysis ────────────────────────────────────────────
-
-async function createScreenshotAnalysis({ capturedAt, diffScore, isSuspicious, analysisStatus, screenshotId }) {
+async function createScreenshotAnalysis({ capturedAt, diffScore, isSuspicious, analysisStatus }) {
   return apiRequest('/screenshot-analyses/submit', {
     method: 'POST',
     body: JSON.stringify({
@@ -83,7 +65,6 @@ async function createScreenshotAnalysis({ capturedAt, diffScore, isSuspicious, a
       diffScore,
       isSuspicious,
       analysisStatus,
-      screenshotId,
     }),
   });
 }
@@ -96,6 +77,5 @@ module.exports = {
   clockOut,
   startBreak,
   endBreak,
-  uploadScreenshot,
   createScreenshotAnalysis,
 };

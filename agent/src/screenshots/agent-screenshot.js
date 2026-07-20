@@ -1,6 +1,6 @@
 const screenshot = require('screenshot-desktop');
 const { PNG } = require('pngjs');
-const { uploadScreenshot, createScreenshotAnalysis } = require('../api/api');
+const { createScreenshotAnalysis } = require('../api/api');
 
 // const CAPTURE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const CAPTURE_INTERVAL_MS = 30 * 1000; //for testing :30 sec
@@ -39,19 +39,12 @@ async function compareScreenshots(prevPng, currPng) {
   return totalPixels > 0 ? numDiffPixels / totalPixels : 0;
 }
 
-async function captureAndUpload() {
-     console.log('[screenshot] capture cycle triggered');
-  if (currentStatus !== 'active') {
-    console.log('[screenshot] skipped - status:', currentStatus);
-    return;
-}
+async function captureAndAnalyze() {
+  if (currentStatus !== 'active') return;
 
   let imgBuffer;
   try {
-     console.log('[screenshot] taking screenshot...');
     imgBuffer = await screenshot({ format: 'png' });
-
-    console.log('[screenshot] screenshot captured, bytes:', imgBuffer.length);
   } catch (err) {
     console.error('[screenshot] capture failed:', err.message);
     return;
@@ -64,6 +57,9 @@ async function captureAndUpload() {
     console.error('[screenshot] PNG parse failed:', err.message);
     return;
   }
+
+  // Release the raw buffer — we only need the parsed PNG for comparison
+  imgBuffer = null;
 
   let diffScore = null;
   let isSuspicious = false;
@@ -87,34 +83,20 @@ async function captureAndUpload() {
         consecutiveLowDiffCount = 0;
       }
     } else {
-      console.warn('[screenshot] dimension mismatch between consecutive screenshots, resetting counter');
       consecutiveLowDiffCount = 0;
     }
   }
 
+  // Replace previous screenshot reference — old reference is released by GC
   previousScreenshot = currentPng;
 
-  let screenshotId;
-  try {
-    const uploadResult = await uploadScreenshot(imgBuffer);
-    screenshotId = uploadResult[0]?.id;
-  } catch (err) {
-    console.error('[screenshot] upload failed:', err.message);
-    return;
-  }
-
-  if (!screenshotId) {
-    console.error('[screenshot] upload returned no media ID');
-    return;
-  }
-
+  // Submit metadata only — no screenshot data is sent to the server
   try {
     await createScreenshotAnalysis({
       capturedAt: new Date().toISOString(),
       diffScore,
       isSuspicious,
       analysisStatus,
-      screenshotId,
     });
   } catch (err) {
     console.error('[screenshot] ScreenshotAnalysis creation failed:', err.message);
@@ -122,11 +104,10 @@ async function captureAndUpload() {
 }
 
 function startCapturing() {
-     console.log('[screenshot] startCapturing called');
   if (isCapturing) return;
   isCapturing = true;
   resetState();
-  captureTimer = setInterval(captureAndUpload, CAPTURE_INTERVAL_MS);
+  captureTimer = setInterval(captureAndAnalyze, CAPTURE_INTERVAL_MS);
 }
 
 function stopCapturing() {

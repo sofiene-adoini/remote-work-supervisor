@@ -634,7 +634,6 @@ export interface ApiScreenshotAnalysisScreenshotAnalysis
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
-    screenshot: Schema.Attribute.Media<'images'>;
     session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

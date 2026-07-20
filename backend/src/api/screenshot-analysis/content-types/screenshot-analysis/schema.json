@@ -38,12 +38,6 @@
       "relation": "manyToOne",
       "target": "api::session.session",
       "inversedBy": "screenshotAnalyses"
-    },
-    "screenshot": {
-      "type": "media",
-      "multiple": false,
-      "required": false,
-      "allowedTypes": ["images"]
     }
   }
 }
