@@ -33,6 +33,12 @@
       "type": "integer",
       "default": 0
     },
+    "screenshotAnalyses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::screenshot-analysis.screenshot-analysis",
+      "mappedBy": "session"
+    },
     "user": {
       "type": "relation",
       "relation": "manyToOne",

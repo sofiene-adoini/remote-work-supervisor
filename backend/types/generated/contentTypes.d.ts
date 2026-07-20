@@ -601,6 +601,47 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiScreenshotAnalysisScreenshotAnalysis
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'screenshot_analyses';
+  info: {
+    displayName: 'ScreenshotAnalysis';
+    pluralName: 'screenshot-analyses';
+    singularName: 'screenshot-analysis';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    analysisStatus: Schema.Attribute.Enumeration<
+      ['normal', 'suspicious', 'reviewed']
+    > &
+      Schema.Attribute.DefaultTo<'normal'>;
+    capturedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    diffScore: Schema.Attribute.Decimal;
+    employee: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    isSuspicious: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    screenshot: Schema.Attribute.Media<'images'>;
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiSessionSession extends Struct.CollectionTypeSchema {
   collectionName: 'sessions';
   info: {
@@ -626,6 +667,10 @@ export interface ApiSessionSession extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    screenshotAnalyses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    >;
     status: Schema.Attribute.Enumeration<['active', 'break', 'completed']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'active'>;
@@ -1238,6 +1283,10 @@ export interface PluginUsersPermissionsUser
       'manyToOne',
       'plugin::users-permissions.role'
     >;
+    screenshotAnalyses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    >;
     sessions: Schema.Attribute.Relation<'oneToMany', 'api::session.session'>;
     team: Schema.Attribute.Relation<'manyToOne', 'api::team.team'>;
     timeEntries: Schema.Attribute.Relation<
@@ -1271,6 +1320,7 @@ declare module '@strapi/strapi' {
       'api::alert.alert': ApiAlertAlert;
       'api::overtime-declaration.overtime-declaration': ApiOvertimeDeclarationOvertimeDeclaration;
       'api::project.project': ApiProjectProject;
+      'api::screenshot-analysis.screenshot-analysis': ApiScreenshotAnalysisScreenshotAnalysis;
       'api::session.session': ApiSessionSession;
       'api::team-stats.team-stats': ApiTeamStatsTeamStats;
       'api::team.team': ApiTeamTeam;

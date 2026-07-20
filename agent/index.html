@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Remote Work Supervisor</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 1.5rem; margin: 0; }
+    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
+    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+    button { padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    input[type="text"] { padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; flex: 1; min-width: 0; }
+    #status { font-weight: 700; }
+    #log { font-size: 0.8rem; color: #555; white-space: pre-wrap; max-height: 180px; overflow-y: auto; margin-top: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; }
+    .auth-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center; }
+    .auth-label { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <h1>Remote Work Supervisor</h1>
+
+  <div class="auth-row">
+    <span class="auth-label">JWT:</span>
+    <input type="text" id="token-input" placeholder="Paste auth token here...">
+    <button id="btn-set-token">Set Token</button>
+  </div>
+
+  <p>Status: <strong id="status">Offline</strong> | Auth: <strong id="auth-status">No</strong></p>
+
+  <div class="row">
+    <button id="btn-clock-in" disabled>Clock In</button>
+    <button id="btn-clock-out" disabled>Clock Out</button>
+  </div>
+  <div class="row">
+    <button id="btn-break-start" disabled>Start Break</button>
+    <button id="btn-break-end" disabled>End Break</button>
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    const $ = (sel) => document.querySelector(sel);
+    const statusEl = $('#status');
+    const authStatusEl = $('#auth-status');
+    const logEl = $('#log');
+    let isAuthenticated = false;
+
+    function log(msg) {
+      logEl.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateUI(state) {
+      const s = state.status;
+      statusEl.textContent = s;
+
+      $('#btn-clock-in').disabled = !isAuthenticated || s !== 'clocked_out';
+      $('#btn-clock-out').disabled = !isAuthenticated || s === 'clocked_out';
+      $('#btn-break-start').disabled = !isAuthenticated || s !== 'active';
+      $('#btn-break-end').disabled = !isAuthenticated || s !== 'break';
+    }
+
+    async function refresh() {
+      const state = await window.agent.getStatus();
+      updateUI(state);
+    }
+
+    $('#btn-set-token').addEventListener('click', async () => {
+      const token = $('#token-input').value.trim();
+      if (!token) { log('No token provided'); return; }
+      const res = await window.agent.setAuthToken(token);
+      if (res.ok) {
+        isAuthenticated = true;
+        authStatusEl.textContent = 'Yes';
+        log('Auth token set OK');
+      } else {
+        log('Token set failed');
+      }
+      await refresh();
+    });
+
+    $('#btn-clock-in').addEventListener('click', async () => {
+      log('Clocking in...');
+      const res = await window.agent.clockIn();
+      log(res.ok ? 'Clock-in OK' : `Clock-in FAILED: ${res.error}`);
+      await refresh();
+    });
+
+    $('#btn-clock-out').addEventListener('click', async () => {
+      log('Clocking out...');
+      const res = await window.agent.clockOut();
+      log(res.ok ? 'Clock-out OK' : `Clock-out FAILED: ${res.error}`);
+      await refresh();
+    });
+
+    $('#btn-break-start').addEventListener('click', async () => {
+      log('Starting break...');
+      const res = await window.agent.startBreak('manual');
+      log(res.ok ? 'Break started' : `Break-start FAILED: ${res.error}`);
+      await refresh();
+    });
+
+    $('#btn-break-end').addEventListener('click', async () => {
+      log('Ending break...');
+      const res = await window.agent.endBreak();
+      log(res.ok ? 'Break ended' : `Break-end FAILED: ${res.error}`);
+      await refresh();
+    });
+
+    // Initial state
+    refresh();
+  </script>
+</body>
+</html>

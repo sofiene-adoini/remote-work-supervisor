@@ -99,9 +99,20 @@ plugin.contentTypes.user.schema.attributes.projects = {
   mappedBy: 'users',
 };
 
+plugin.contentTypes.user.schema.attributes.screenshotAnalyses = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::screenshot-analysis.screenshot-analysis',
+  mappedBy: 'employee',
+};
+
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';
+  };
+
+  plugin.policies.isAuthenticatedUser = (policyContext) => {
+    return !!policyContext.state?.user?.id;
   };
 
   const originalAuthFactory = plugin.controllers.auth;
@@ -238,7 +249,7 @@ plugin.contentTypes.user.schema.attributes.projects = {
         });
 
         strapiInstance.log.info(
-          `[auth invite] ${fullName} <${email}> can set an initial password with token: ${resetPasswordToken}`
+          `[auth invite] ${fullName} <${email}> invited — password-reset token generated`
         );
 
         const invitedUser = await strapiInstance.db.query(USER_UID).findOne({
