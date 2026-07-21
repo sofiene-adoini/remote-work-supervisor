@@ -37,7 +37,9 @@ import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realt
         <div class="alert-list">
           @for (alert of alerts(); track alert.id) {
             <div class="alert-item" [class.unread]="!alert.isRead" (click)="handleMarkRead(alert)">
-              <div class="alert-severity" [class]="'severity-' + alert.severity"></div>
+              <div class="alert-severity" [class]="'severity-' + alert.severity">
+                <span class="severity-label">{{ alert.severity }}</span>
+              </div>
               <div class="alert-content">
                 <span class="alert-type">{{ alert.title }}</span>
                 <p class="alert-message">{{ alert.message }}</p>
@@ -55,7 +57,7 @@ import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realt
   styles: [`
     @use 'styles/design-tokens' as t;
 
-    .page-container { max-width: 720px; }
+    .page-container { width: 100%; }
 
     .page-header {
       display: flex;
@@ -131,15 +133,19 @@ import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realt
     }
 
     .alert-severity {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-top: 0.375rem;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: capitalize;
       flex-shrink: 0;
+      margin-top: 0.125rem;
 
-      &.severity-info { background: #3b82f6; }
-      &.severity-warning { background: #d9973b; }
-      &.severity-critical { background: #d64545; }
+      &.severity-info { background: #e8f1fb; color: #2b3a67; }
+      &.severity-warning { background: #fef3e2; color: #92610a; }
+      &.severity-critical { background: #fde8e8; color: #b91c1c; }
     }
 
     .alert-content {
