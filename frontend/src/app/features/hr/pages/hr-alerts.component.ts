@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { LucideBell } from '@lucide/angular';
+import { Subscription } from 'rxjs';
 import { HrAlertsService } from '../services/hr-alerts.service';
 import { HrAlert } from '../models/hr.models';
+import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-hr-alerts',
@@ -30,11 +32,11 @@ import { HrAlert } from '../models/hr.models';
       <div class="card">
         <div class="alert-list">
           @for (alert of alerts(); track alert.id) {
-            <div class="alert-row" [class.unread]="!alert.read">
+            <div class="alert-row" [class.unread]="!alert.isRead">
               <div class="alert-dot" [class]="'dot-' + alert.severity"></div>
               <div class="alert-body">
                 <div class="alert-top">
-                  <span class="alert-type">{{ alert.type }}</span>
+                  <span class="alert-type">{{ alert.title }}</span>
                   <span class="alert-time">{{ alert.createdAt | date:'short' }}</span>
                 </div>
                 <p class="alert-message">{{ alert.message }}</p>
@@ -86,8 +88,7 @@ import { HrAlert } from '../models/hr.models';
 
       &.dot-info { background: #3b82f6; }
       &.dot-warning { background: #d9973b; }
-      &.dot-error { background: #d64545; }
-      &.dot-success { background: #1fb6a6; }
+      &.dot-critical { background: #d64545; }
     }
 
     .alert-body { flex: 1; min-width: 0; }
@@ -143,18 +144,49 @@ import { HrAlert } from '../models/hr.models';
     @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
   `],
 })
-export class HrAlertsComponent implements OnInit {
+export class HrAlertsComponent implements OnInit, OnDestroy {
   private readonly alertsService = inject(HrAlertsService);
+  private readonly realtime = inject(RealtimeService);
+
   protected readonly alerts = signal<HrAlert[]>([]);
   protected readonly loading = signal(true);
 
+  private alertSub?: Subscription;
+
   ngOnInit(): void {
+    this.loadAlerts();
+    this.subscribeToRealtime();
+  }
+
+  ngOnDestroy(): void {
+    this.alertSub?.unsubscribe();
+  }
+
+  private loadAlerts(): void {
     this.alertsService.getAllAlerts(50).subscribe({
       next: (res) => {
         this.alerts.set(res.alerts);
         this.loading.set(false);
       },
       error: () => this.loading.set(false),
+    });
+  }
+
+  private subscribeToRealtime(): void {
+    this.alertSub = this.realtime.alertCreated$.subscribe((event: AlertCreatedEvent) => {
+      const newAlert: HrAlert = {
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        severity: event.severity,
+        message: event.message,
+        isRead: event.isRead,
+        createdAt: event.createdAt,
+        user: event.user,
+        session: event.session,
+      };
+
+      this.alerts.update((list) => [newAlert, ...list]);
     });
   }
 }

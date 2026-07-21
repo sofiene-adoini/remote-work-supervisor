@@ -1,10 +1,11 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-const { setAuthToken, clearAuthToken, clockIn, clockOut, startBreak, endBreak } = require('./src/api/api');
+const { setAuthToken, clearAuthToken, clockIn, clockOut, startBreak, endBreak, reportIdle } = require('./src/api/api');
 const { setSessionState, getSessionState, resetSessionState } = require('./src/state/session-state');
 const tracker = require('./src/tracking/agent-tracker');
 const screenshot = require('./src/screenshots/agent-screenshot');
+const realtime = require('./src/realtime/realtime-agent');
 
 let mainWindow;
 
@@ -61,10 +62,12 @@ async function handleAutoBreakEnd() {
 ipcMain.handle('set-auth-token', (_event, token) => {
   setAuthToken(token);
   setSessionState({ isAuthenticated: true });
+  realtime.connect(token);
   return { ok: true };
 });
 
 ipcMain.handle('clear-auth-token', () => {
+  realtime.disconnect();
   clearAuthToken();
   resetSessionState();
   tracker.stopTracking();
@@ -85,8 +88,11 @@ ipcMain.handle('clock-in', async () => {
       onAutoBreakStart: handleAutoBreakStart,
       onAutoBreakEnd: handleAutoBreakEnd,
       onActivityStateChange: ({ state, idleMs }) => {
-        // Placeholder for future HR-dashboard integration.
-        // The tracker already logs state transitions; nothing else needed here yet.
+        if (state === 'idle' && idleMs > 0) {
+          reportIdle(idleMs).catch((err) => {
+            console.error('[agent] reportIdle failed:', err.message);
+          });
+        }
       },
     });
     screenshot.startCapturing();
@@ -145,6 +151,22 @@ ipcMain.handle('get-status', () => {
   return getSessionState();
 });
 
+ipcMain.handle('connect-realtime', () => {
+  const token = realtime.getToken();
+  if (!token) return { ok: false, error: 'No auth token available' };
+  realtime.connect(token);
+  return { ok: true };
+});
+
+ipcMain.handle('disconnect-realtime', () => {
+  realtime.disconnect();
+  return { ok: true };
+});
+
+ipcMain.handle('is-realtime-connected', () => {
+  return { connected: realtime.isConnected() };
+});
+
 // ── App lifecycle ──────────────────────────────────────────────────
 
 app.whenReady().then(() => {
@@ -158,6 +180,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  realtime.disconnect();
   tracker.stopTracking();
   screenshot.stopCapturing();
 

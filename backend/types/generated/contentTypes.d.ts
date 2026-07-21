@@ -492,17 +492,17 @@ export interface ApiAlertAlert extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    isRead: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'> &
       Schema.Attribute.Private;
     message: Schema.Attribute.Text & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
-    read: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
-    severity: Schema.Attribute.Enumeration<
-      ['info', 'warning', 'error', 'success']
-    > &
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    severity: Schema.Attribute.Enumeration<['info', 'warning', 'critical']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'info'>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
     type: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -652,6 +652,7 @@ export interface ApiSessionSession extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    alerts: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'>;
     breakEnd: Schema.Attribute.DateTime;
     breakStart: Schema.Attribute.DateTime;
     clockIn: Schema.Attribute.DateTime & Schema.Attribute.Required;

@@ -48,11 +48,21 @@ async function clockOut() {
 }
 
 async function startBreak(reason) {
-  return apiRequest('/sessions/break-start', { method: 'POST' });
+  return apiRequest('/sessions/break-start', {
+    method: 'POST',
+    body: JSON.stringify({ reason }),
+  });
 }
 
 async function endBreak() {
   return apiRequest('/sessions/break-end', { method: 'POST' });
+}
+
+async function reportIdle(idleMs) {
+  return apiRequest('/sessions/idle-detected', {
+    method: 'POST',
+    body: JSON.stringify({ idleMs }),
+  });
 }
 
 // ── ScreenshotAnalysis (metadata only — no screenshot upload) ──────
@@ -77,5 +87,6 @@ module.exports = {
   clockOut,
   startBreak,
   endBreak,
+  reportIdle,
   createScreenshotAnalysis,
 };

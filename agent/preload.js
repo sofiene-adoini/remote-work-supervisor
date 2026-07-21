@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld('agent', {
   startBreak: (reason) => ipcRenderer.invoke('start-break', reason),
   endBreak: () => ipcRenderer.invoke('end-break'),
   getStatus: () => ipcRenderer.invoke('get-status'),
+  connectRealtime: () => ipcRenderer.invoke('connect-realtime'),
+  disconnectRealtime: () => ipcRenderer.invoke('disconnect-realtime'),
+  isRealtimeConnected: () => ipcRenderer.invoke('is-realtime-connected'),
 });

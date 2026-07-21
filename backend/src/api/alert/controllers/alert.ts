@@ -10,17 +10,18 @@ export default {
 
     const where: any = { user: userId };
     if (unreadOnly === 'true') {
-      where.read = false;
+      where.isRead = false;
     }
 
     const alerts = await strapi.db.query(ALERT_UID).findMany({
       where,
       orderBy: { createdAt: 'desc' },
       limit: parseInt(limit, 10),
+      populate: ['session'],
     });
 
     const unreadCount = await strapi.db.query(ALERT_UID).count({
-      where: { user: userId, read: false },
+      where: { user: userId, isRead: false },
     });
 
     return ctx.send({ alerts, unreadCount });
@@ -32,7 +33,7 @@ export default {
     const alerts = await strapi.db.query(ALERT_UID).findMany({
       orderBy: { createdAt: 'desc' },
       limit: parseInt(limit, 10),
-      populate: ['user'],
+      populate: ['user', 'session'],
     });
 
     return ctx.send({ alerts });
@@ -54,7 +55,7 @@ export default {
 
     const updated = await strapi.db.query(ALERT_UID).update({
       where: { id: alert.id },
-      data: { read: true },
+      data: { isRead: true },
     });
 
     return ctx.send({ alert: updated });
@@ -65,8 +66,8 @@ export default {
     if (!userId) return ctx.unauthorized('Authentication required');
 
     await strapi.db.query(ALERT_UID).updateMany({
-      where: { user: userId, read: false },
-      data: { read: true },
+      where: { user: userId, isRead: false },
+      data: { isRead: true },
     });
 
     return ctx.send({ ok: true });

@@ -1,4 +1,5 @@
 import type { Context } from 'koa';
+import { createAndEmit } from '../../alert/services/notification.service';
 
 const SA_UID = 'api::screenshot-analysis.screenshot-analysis';
 const SESSION_UID = 'api::session.session';
@@ -176,6 +177,16 @@ export default {
         session: activeSession.id,
       },
     } as any);
+
+    if (isSuspicious) {
+      createAndEmit({
+        type: 'suspicious_activity',
+        message: 'Suspicious screenshot pattern detected — consecutive low-diff captures.',
+        severity: 'critical',
+        userId,
+        sessionId: activeSession.id,
+      }).catch((err) => strapi.log.error(`[Notification] suspicious_activity alert failed: ${err.message}`));
+    }
 
     return ctx.send({ record }, 201);
   },

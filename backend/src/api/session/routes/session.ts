@@ -66,5 +66,13 @@ export default {
         policies: [],
       },
     },
+    {
+      method: 'POST',
+      path: '/sessions/idle-detected',
+      handler: 'session.idleDetected',
+      config: {
+        policies: [],
+      },
+    },
   ],
 };

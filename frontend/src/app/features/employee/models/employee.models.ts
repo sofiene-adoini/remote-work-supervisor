@@ -43,11 +43,13 @@ export interface TimeEntry {
 export interface Alert {
   id: number;
   type: string;
-  severity: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  severity: 'info' | 'warning' | 'critical';
   message: string;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
-  user?: { id: number; fullName: string };
+  user?: { id: number; fullName?: string };
+  session?: { id: number } | null;
 }
 
 export interface OvertimeDeclaration {
