@@ -26,4 +26,8 @@ export const EMPLOYEE_ROUTES: Routes = [
     path: 'overtime',
     loadComponent: () => import('./pages/employee-overtime.component').then((m) => m.EmployeeOvertimeComponent),
   },
+  {
+    path: 'desktop-agent',
+    loadComponent: () => import('./pages/desktop-agent.component').then((m) => m.DesktopAgentComponent),
+  },
 ];

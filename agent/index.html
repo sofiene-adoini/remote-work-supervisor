@@ -3,113 +3,511 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Remote Work Supervisor</title>
+  <title>The Guardian</title>
   <style>
-    body { font-family: system-ui, sans-serif; padding: 1.5rem; margin: 0; }
-    h1 { font-size: 1.1rem; margin: 0 0 1rem; }
-    .row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
-    button { padding: 0.4rem 0.8rem; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
-    button:disabled { opacity: 0.4; cursor: not-allowed; }
-    input[type="text"] { padding: 0.4rem 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85rem; flex: 1; min-width: 0; }
-    #status { font-weight: 700; }
-    #log { font-size: 0.8rem; color: #555; white-space: pre-wrap; max-height: 180px; overflow-y: auto; margin-top: 1rem; border-top: 1px solid #eee; padding-top: 0.5rem; }
-    .auth-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center; }
-    .auth-label { font-size: 0.85rem; font-weight: 600; white-space: nowrap; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f5f3f0;
+      color: #1a1d23;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Shared ─────────────────────────────────────────────────────── */
+
+    .screen { display: none; width: 100%; height: 100vh; }
+    .screen.active { display: flex; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+      padding: 0.5rem 1rem; border: none; border-radius: 8px; cursor: pointer;
+      font-family: inherit; font-size: 0.8125rem; font-weight: 600;
+      transition: background 150ms ease, opacity 150ms ease;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #138D9E; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #0f7580; }
+    .btn-danger { background: #A31D1D; color: #fff; }
+    .btn-danger:hover:not(:disabled) { background: #8b1818; }
+    .btn-ghost { background: transparent; color: #6b7280; border: 1px solid #d6dce5; }
+    .btn-ghost:hover:not(:disabled) { background: #f5f3f0; color: #1a1d23; }
+
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    }
+    .status-dot.green { background: #2e9e6c; box-shadow: 0 0 6px rgba(46,158,108,0.4); }
+    .status-dot.red { background: #A31D1D; }
+    .status-dot.yellow { background: #C2924F; }
+    .status-dot.gray { background: #9ca3af; }
+
+    /* ── Pairing Screen ─────────────────────────────────────────────── */
+
+    #pairing-screen {
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 2rem;
+    }
+
+    .pairing-card {
+      width: 100%; max-width: 360px;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(11,74,90,0.08);
+      padding: 2rem;
+    }
+
+    .pairing-logo {
+      text-align: center; margin-bottom: 1.5rem;
+    }
+
+    .pairing-logo .logo-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      object-fit: contain; margin-bottom: 0.75rem;
+    }
+
+    .pairing-logo h1 {
+      font-size: 1.125rem; font-weight: 700; color: #0B4A5A;
+    }
+
+    .pairing-logo .subtitle {
+      font-size: 0.8125rem; color: #6b7280; margin-top: 0.25rem;
+    }
+
+    .pairing-field { margin-bottom: 1rem; }
+    .pairing-field label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      color: #374151; margin-bottom: 0.375rem; text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .pairing-field input {
+      width: 100%; padding: 0.625rem 0.75rem; border: 1.5px solid #d6dce5;
+      border-radius: 8px; font-family: inherit; font-size: 0.875rem;
+      transition: border-color 150ms ease;
+    }
+    .pairing-field input:focus {
+      outline: none; border-color: #138D9E;
+      box-shadow: 0 0 0 3px rgb(19 141 158 / 22%);
+    }
+    .pairing-field input::placeholder { color: #9ca3af; }
+
+    .pairing-code-input {
+      font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 1.125rem; font-weight: 600;
+      letter-spacing: 0.15em; text-align: center;
+      text-transform: uppercase;
+    }
+
+    .pairing-btn { width: 100%; padding: 0.625rem; font-size: 0.875rem; }
+
+    .pairing-error {
+      background: #fef2f2; border: 1px solid #fecaca; color: #A31D1D;
+      border-radius: 8px; padding: 0.625rem 0.75rem; font-size: 0.8125rem;
+      margin-bottom: 1rem; display: none;
+    }
+    .pairing-error.visible { display: block; }
+
+    .pairing-loading { display: none; text-align: center; padding: 1rem 0; }
+    .pairing-loading.visible { display: block; }
+
+    .spinner {
+      width: 24px; height: 24px; border: 3px solid #e5e7eb;
+      border-top-color: #138D9E; border-radius: 50%;
+      animation: spin 0.6s linear infinite; margin: 0 auto 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .pairing-meta {
+      margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #f3f4f6;
+      display: flex; flex-direction: column; gap: 0.375rem;
+    }
+
+    .pairing-meta-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 0.75rem; color: #6b7280;
+    }
+
+    .pairing-meta-row .value { font-weight: 600; color: #374151; }
+
+    /* ── Dashboard Screen ───────────────────────────────────────────── */
+
+    #dashboard-screen {
+      flex-direction: column;
+    }
+
+    .dash-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.75rem 1.25rem; background: #fff;
+      border-bottom: 1px solid #d6dce5;
+    }
+
+    .dash-topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+
+    .dash-topbar-left .logo-sm {
+      width: 32px; height: 32px; border-radius: 8px;
+      object-fit: contain;
+    }
+
+    .dash-topbar-left h2 {
+      font-size: 0.9375rem; font-weight: 700; color: #0B4A5A;
+    }
+
+    .dash-topbar-right { display: flex; align-items: center; gap: 0.75rem; }
+
+    .trust-badge {
+      display: flex; align-items: center; gap: 0.375rem;
+      font-size: 0.6875rem; color: #6b7280;
+      padding: 0.25rem 0.625rem; border-radius: 999px;
+      background: #f5f3f0;
+    }
+
+    .dash-body {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 2rem;
+    }
+
+    .session-card {
+      width: 100%; max-width: 380px;
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(11,74,90,0.06);
+      padding: 2rem; text-align: center;
+    }
+
+    .session-status {
+      font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem;
+    }
+    .session-status.clocked_out { color: #6b7280; }
+    .session-status.active { color: #2e9e6c; }
+    .session-status.break { color: #C2924F; }
+
+    .session-subtitle {
+      font-size: 0.8125rem; color: #6b7280; margin-bottom: 1.5rem;
+    }
+
+    .session-actions {
+      display: flex; flex-direction: column; gap: 0.625rem;
+    }
+
+    .session-actions .btn { width: 100%; padding: 0.75rem; font-size: 0.9375rem; }
+
+    .dash-bottom {
+      padding: 0.75rem 1.25rem; background: #fff;
+      border-top: 1px solid #d6dce5;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .dash-bottom .connection {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.75rem; color: #6b7280;
+    }
+
+    .dash-bottom .version {
+      font-size: 0.6875rem; color: #9ca3af;
+    }
+
+    .dash-bottom .logout-btn {
+      font-size: 0.75rem; padding: 0.375rem 0.75rem;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Remote Work Supervisor</h1>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- PAIRING SCREEN                                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="pairing-screen" class="screen active">
+    <div class="pairing-card">
+      <div class="pairing-logo">
+        <img src="logo.png" alt="The Guardian" class="logo-icon" />
+        <h1>The Guardian</h1>
+        <div class="subtitle">Pair your device with your account</div>
+      </div>
 
-  <div class="auth-row">
-    <span class="auth-label">JWT:</span>
-    <input type="text" id="token-input" placeholder="Paste auth token here...">
-    <button id="btn-set-token">Set Token</button>
+      <div id="pairing-error" class="pairing-error"></div>
+
+      <div id="pairing-loading" class="pairing-loading">
+        <div class="spinner"></div>
+        <div style="font-size:0.8125rem;color:#6b7280;">Pairing device...</div>
+      </div>
+
+      <div id="pairing-form">
+        <div class="pairing-field">
+          <label for="code-input">Pairing Code</label>
+          <input type="text" id="code-input" class="pairing-code-input"
+            placeholder="RWS-XXXX-XXXX" maxlength="13" autocomplete="off" spellcheck="false" />
+        </div>
+
+        <button id="btn-pair" class="btn btn-primary pairing-btn" disabled>Pair</button>
+      </div>
+
+      <div class="pairing-meta">
+        <div class="pairing-meta-row">
+          <span>Agent Version</span>
+          <span class="value" id="meta-version">—</span>
+        </div>
+        <div class="pairing-meta-row">
+          <span>Device Name</span>
+          <span class="value" id="meta-device">—</span>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <p>Status: <strong id="status">Offline</strong> | Auth: <strong id="auth-status">No</strong></p>
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- DASHBOARD SCREEN                                                  -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="dashboard-screen" class="screen">
+    <div class="dash-topbar">
+      <div class="dash-topbar-left">
+        <img src="logo.png" alt="The Guardian" class="logo-sm" />
+        <h2>The Guardian</h2>
+      </div>
+      <div class="dash-topbar-right">
+        <div class="trust-badge">
+          <span class="status-dot green" id="trust-dot"></span>
+          <span id="trust-label">Trusted</span>
+        </div>
+      </div>
+    </div>
 
-  <div class="row">
-    <button id="btn-clock-in" disabled>Clock In</button>
-    <button id="btn-clock-out" disabled>Clock Out</button>
-  </div>
-  <div class="row">
-    <button id="btn-break-start" disabled>Start Break</button>
-    <button id="btn-break-end" disabled>End Break</button>
-  </div>
+    <div class="dash-body">
+      <div class="session-card">
+        <div class="session-status" id="session-status-text">Clocked Out</div>
+        <div class="session-subtitle" id="session-subtitle">Ready to start your work session</div>
+        <div class="session-actions">
+          <button id="btn-clock-in" class="btn btn-primary" style="display:none;">Clock In</button>
+          <button id="btn-break-start" class="btn btn-ghost" style="display:none;">Start Break</button>
+          <button id="btn-break-end" class="btn btn-primary" style="display:none;">End Break</button>
+          <button id="btn-clock-out" class="btn btn-danger" style="display:none;">Clock Out</button>
+        </div>
+      </div>
+    </div>
 
-  <div id="log"></div>
+    <div class="dash-bottom">
+      <div class="connection">
+        <span class="status-dot gray" id="conn-dot"></span>
+        <span id="conn-label">Connecting...</span>
+        <span style="margin-left:0.5rem;" id="device-label"></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <span class="version" id="version-label"></span>
+        <button id="btn-logout" class="btn btn-ghost logout-btn">Logout</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const $ = (sel) => document.querySelector(sel);
-    const statusEl = $('#status');
-    const authStatusEl = $('#auth-status');
-    const logEl = $('#log');
-    let isAuthenticated = false;
 
-    function log(msg) {
-      logEl.textContent += `[${new Date().toLocaleTimeString()}] ${msg}\n`;
-      logEl.scrollTop = logEl.scrollHeight;
+    // ── Screens ──────────────────────────────────────────────────────
+
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      $(`#${name}-screen`).classList.add('active');
     }
 
-    function updateUI(state) {
-      const s = state.status;
-      statusEl.textContent = s;
+    // ── Pairing screen logic ─────────────────────────────────────────
 
-      $('#btn-clock-in').disabled = !isAuthenticated || s !== 'clocked_out';
-      $('#btn-clock-out').disabled = !isAuthenticated || s === 'clocked_out';
-      $('#btn-break-start').disabled = !isAuthenticated || s !== 'active';
-      $('#btn-break-end').disabled = !isAuthenticated || s !== 'break';
-    }
+    const codeInput = $('#code-input');
+    const pairBtn = $('#btn-pair');
+    const pairingError = $('#pairing-error');
+    const pairingLoading = $('#pairing-loading');
+    const pairingForm = $('#pairing-form');
 
-    async function refresh() {
-      const state = await window.agent.getStatus();
-      updateUI(state);
-    }
-
-    $('#btn-set-token').addEventListener('click', async () => {
-      const token = $('#token-input').value.trim();
-      if (!token) { log('No token provided'); return; }
-      const res = await window.agent.setAuthToken(token);
-      if (res.ok) {
-        isAuthenticated = true;
-        authStatusEl.textContent = 'Yes';
-        log('Auth token set OK');
-      } else {
-        log('Token set failed');
+    codeInput.addEventListener('input', () => {
+      let raw = codeInput.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+      if (raw.length > 11) raw = raw.slice(0, 11);
+      let formatted = '';
+      for (let i = 0; i < raw.length; i++) {
+        if (i === 3 || i === 7) formatted += '-';
+        formatted += raw[i];
       }
-      await refresh();
+      codeInput.value = formatted;
+      pairBtn.disabled = formatted.length < 13;
     });
 
+    codeInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !pairBtn.disabled) pairBtn.click();
+    });
+
+    pairBtn.addEventListener('click', async () => {
+      const code = codeInput.value.trim();
+      if (code.length < 13) return;
+
+      pairingForm.style.display = 'none';
+      pairingError.classList.remove('visible');
+      pairingLoading.classList.add('visible');
+
+      const res = await window.agent.pairDevice(code);
+
+      if (res.ok) {
+        showDashboard(res.trustExpiresAt);
+      } else {
+        pairingLoading.classList.remove('visible');
+        pairingForm.style.display = '';
+        pairingError.textContent = res.error || 'Pairing failed. Please try again.';
+        pairingError.classList.add('visible');
+        codeInput.value = '';
+        codeInput.focus();
+        pairBtn.disabled = true;
+      }
+    });
+
+    // ── Dashboard screen logic ───────────────────────────────────────
+
+    function showDashboard(trustExpiresAt) {
+      showScreen('dashboard');
+      updateTrustBadge(trustExpiresAt);
+      refreshStatus();
+    }
+
+    function updateTrustBadge(trustExpiresAt) {
+      const trustDot = $('#trust-dot');
+      const trustLabel = $('#trust-label');
+      if (!trustExpiresAt) {
+        trustDot.className = 'status-dot gray';
+        trustLabel.textContent = 'Unknown';
+        return;
+      }
+      const exp = new Date(trustExpiresAt);
+      const now = new Date();
+      const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+      if (daysLeft <= 0) {
+        trustDot.className = 'status-dot red';
+        trustLabel.textContent = 'Trust Expired';
+      } else if (daysLeft <= 7) {
+        trustDot.className = 'status-dot yellow';
+        trustLabel.textContent = `Trust: ${daysLeft}d left`;
+      } else {
+        trustDot.className = 'status-dot green';
+        trustLabel.textContent = `Trust: ${daysLeft}d left`;
+      }
+    }
+
+    function updateSessionUI(state) {
+      const s = state.status;
+      const statusEl = $('#session-status-text');
+      const subEl = $('#session-subtitle');
+      const btnClockIn = $('#btn-clock-in');
+      const btnClockOut = $('#btn-clock-out');
+      const btnBreakStart = $('#btn-break-start');
+      const btnBreakEnd = $('#btn-break-end');
+
+      btnClockIn.style.display = 'none';
+      btnClockOut.style.display = 'none';
+      btnBreakStart.style.display = 'none';
+      btnBreakEnd.style.display = 'none';
+
+      statusEl.className = 'session-status ' + s;
+
+      switch (s) {
+        case 'clocked_out':
+          statusEl.textContent = 'Clocked Out';
+          subEl.textContent = 'Ready to start your work session';
+          btnClockIn.style.display = '';
+          break;
+        case 'active':
+          statusEl.textContent = 'Working';
+          subEl.textContent = 'Your session is active';
+          btnBreakStart.style.display = '';
+          btnClockOut.style.display = '';
+          break;
+        case 'break':
+          statusEl.textContent = 'On Break';
+          subEl.textContent = 'Break in progress';
+          btnBreakEnd.style.display = '';
+          break;
+      }
+    }
+
+    async function refreshStatus() {
+      const state = await window.agent.getStatus();
+      updateSessionUI(state);
+    }
+
+    // ── Session buttons ──────────────────────────────────────────────
+
     $('#btn-clock-in').addEventListener('click', async () => {
-      log('Clocking in...');
       const res = await window.agent.clockIn();
-      log(res.ok ? 'Clock-in OK' : `Clock-in FAILED: ${res.error}`);
-      await refresh();
+      if (res.ok) refreshStatus();
     });
 
     $('#btn-clock-out').addEventListener('click', async () => {
-      log('Clocking out...');
       const res = await window.agent.clockOut();
-      log(res.ok ? 'Clock-out OK' : `Clock-out FAILED: ${res.error}`);
-      await refresh();
+      if (res.ok) refreshStatus();
     });
 
     $('#btn-break-start').addEventListener('click', async () => {
-      log('Starting break...');
       const res = await window.agent.startBreak('manual');
-      log(res.ok ? 'Break started' : `Break-start FAILED: ${res.error}`);
-      await refresh();
+      if (res.ok) refreshStatus();
     });
 
     $('#btn-break-end').addEventListener('click', async () => {
-      log('Ending break...');
       const res = await window.agent.endBreak();
-      log(res.ok ? 'Break ended' : `Break-end FAILED: ${res.error}`);
-      await refresh();
+      if (res.ok) refreshStatus();
     });
 
-    // Initial state
-    refresh();
+    // ── Logout ───────────────────────────────────────────────────────
+
+    $('#btn-logout').addEventListener('click', async () => {
+      $('#btn-logout').disabled = true;
+      await window.agent.logout();
+    });
+
+    // ── IPC listeners from main process ──────────────────────────────
+
+    window.agent.onPairingRequired(() => {
+      showScreen('pairing');
+      pairingLoading.classList.remove('visible');
+      pairingForm.style.display = '';
+      pairingError.classList.remove('visible');
+      codeInput.value = '';
+      pairBtn.disabled = true;
+      codeInput.focus();
+    });
+
+    window.agent.onAutoLoginSuccess((data) => {
+      showDashboard(data.trustExpiresAt);
+    });
+
+    window.agent.onTrustExpired((data) => {
+      showScreen('pairing');
+      pairingLoading.classList.remove('visible');
+      pairingForm.style.display = '';
+      pairingError.textContent = data?.reason || 'Device trust expired. Please pair again.';
+      pairingError.classList.add('visible');
+      codeInput.value = '';
+      pairBtn.disabled = true;
+    });
+
+    window.agent.onSessionUpdate((state) => {
+      updateSessionUI(state);
+    });
+
+    // ── Startup ──────────────────────────────────────────────────────
+
+    (async () => {
+      const info = await window.agent.getDeviceInfo();
+      $('#meta-version').textContent = info.agentVersion;
+      $('#meta-device').textContent = info.hostname;
+      $('#version-label').textContent = `v${info.agentVersion}`;
+      $('#device-label').textContent = info.hostname;
+
+      const creds = await window.agent.getCredentialInfo();
+      if (creds?.deviceId) {
+        // Has stored credentials — attempt auto-login
+        window.agent.autoLogin();
+      } else {
+        // No credentials — show pairing screen
+        showScreen('pairing');
+        codeInput.focus();
+      }
+    })();
   </script>
 </body>
 </html>

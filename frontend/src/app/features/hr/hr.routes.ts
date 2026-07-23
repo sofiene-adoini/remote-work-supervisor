@@ -34,4 +34,8 @@ export const HR_ROUTES: Routes = [
     path: 'alerts',
     loadComponent: () => import('./pages/hr-alerts.component').then((m) => m.HrAlertsComponent),
   },
+  {
+    path: 'devices',
+    loadComponent: () => import('./pages/hr-devices.component').then((m) => m.HrDevicesComponent),
+  },
 ];

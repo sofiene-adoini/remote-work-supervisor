@@ -1,0 +1,11 @@
+{
+  "kind": "singleType",
+  "collectionName": "agent_api",
+  "info": {
+    "singularName": "agent",
+    "pluralName": "agents",
+    "displayName": "Agent"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {}
+}

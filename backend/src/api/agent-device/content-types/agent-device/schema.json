@@ -1,0 +1,33 @@
+{
+  "kind": "collectionType",
+  "collectionName": "agent_devices",
+  "info": {
+    "singularName": "agent-device",
+    "pluralName": "agent-devices",
+    "displayName": "Agent Device"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "deviceId": { "type": "string", "required": true, "unique": true },
+    "deviceName": { "type": "string", "required": true },
+    "hostname": { "type": "string", "required": true },
+    "operatingSystem": { "type": "string", "required": true },
+    "agentVersion": { "type": "string", "default": "unknown" },
+    "pairedAt": { "type": "datetime", "required": true },
+    "lastLoginAt": { "type": "datetime" },
+    "lastSeenAt": { "type": "datetime" },
+    "trustExpiresAt": { "type": "datetime", "required": true },
+    "lastIPAddress": { "type": "string" },
+    "active": { "type": "boolean", "default": true },
+    "revoked": { "type": "boolean", "default": false },
+    "revokedAt": { "type": "datetime" },
+    "revokedBy": { "type": "string" },
+    "logoutAt": { "type": "datetime" },
+    "employee": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "agentDevices"
+    }
+  }
+}

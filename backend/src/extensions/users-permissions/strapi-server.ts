@@ -106,6 +106,13 @@ plugin.contentTypes.user.schema.attributes.screenshotAnalyses = {
   mappedBy: 'employee',
 };
 
+plugin.contentTypes.user.schema.attributes.agentDevices = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::agent-device.agent-device',
+  mappedBy: 'employee',
+};
+
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';
@@ -159,6 +166,31 @@ plugin.contentTypes.user.schema.attributes.screenshotAnalyses = {
         }
 
         return ctx.send(publicProfile(user));
+      },
+
+      async changePassword(ctx: any) {
+        const result = await authController.changePassword(ctx);
+
+        if (ctx.state.user?.id) {
+          const devices = await strapiInstance.db.query('api::agent-device.agent-device').findMany({
+            where: { employee: ctx.state.user.id, active: true },
+          });
+          const revokedAt = new Date().toISOString();
+          for (const d of devices) {
+            await strapiInstance.db.query('api::agent-device.agent-device').update({
+              where: { id: d.id },
+              data: {
+                active: false,
+                revoked: true,
+                revokedAt,
+                revokedBy: `password-reset:${ctx.state.user.id}`,
+              },
+            });
+          }
+          strapiInstance.log.info(`[auth] All trusted devices revoked for user ${ctx.state.user.id} (password change)`);
+        }
+
+        return result;
       },
 
       async invite(ctx: any) {

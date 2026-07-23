@@ -10,6 +10,10 @@ function clearAuthToken() {
   authToken = null;
 }
 
+function getAuthToken() {
+  return authToken;
+}
+
 async function apiRequest(endpoint, options = {}) {
   const headers = {
     ...(options.headers || {}),
@@ -31,10 +35,43 @@ async function apiRequest(endpoint, options = {}) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error?.message || 'API request failed');
+    const err = new Error(data?.error?.message || data?.error || data?.message || 'API request failed');
+    err.status = response.status;
+    err.body = data;
+    throw err;
   }
 
   return data;
+}
+
+// ── Agent pairing / auth endpoints ─────────────────────────────────
+
+async function pairDevice(code, deviceInfo) {
+  return apiRequest('/agent/pair', {
+    method: 'POST',
+    body: JSON.stringify({ code, ...deviceInfo }),
+  });
+}
+
+async function refreshToken(deviceId, refreshToken) {
+  return apiRequest('/agent/refresh', {
+    method: 'POST',
+    body: JSON.stringify({ deviceId, refreshToken }),
+  });
+}
+
+async function sendHeartbeat(deviceId) {
+  return apiRequest('/agent/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({ deviceId }),
+  });
+}
+
+async function unpairSelf(deviceId) {
+  return apiRequest('/agent/unpair-self', {
+    method: 'POST',
+    body: JSON.stringify({ deviceId }),
+  });
 }
 
 // ── Session endpoints ──────────────────────────────────────────────
@@ -82,7 +119,12 @@ async function createScreenshotAnalysis({ capturedAt, diffScore, isSuspicious, a
 module.exports = {
   setAuthToken,
   clearAuthToken,
+  getAuthToken,
   apiRequest,
+  pairDevice,
+  refreshToken,
+  sendHeartbeat,
+  unpairSelf,
   clockIn,
   clockOut,
   startBreak,

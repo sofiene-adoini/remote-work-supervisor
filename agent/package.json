@@ -1,11 +1,14 @@
 {
-  "name": "agent",
+  "name": "the-guardian",
   "version": "1.0.0",
-  "description": "",
+  "description": "The Guardian — Trusted Device Agent for Assas",
   "main": "main.js",
   "scripts": {
-     "start": "electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "test": "node test-auth.js && node test-tracker.js && node test-screenshot-analysis.js",
+    "test:auth": "node test-auth.js",
+    "test:tracker": "node test-tracker.js",
+    "test:screenshot": "node test-screenshot-analysis.js"
   },
   "keywords": [],
   "author": "",
@@ -16,6 +19,7 @@
     "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "keytar": "^7.9.0",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
     "screenshot-desktop": "^1.15.4",

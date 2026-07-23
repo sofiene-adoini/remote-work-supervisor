@@ -20,6 +20,8 @@ import {
   LucideX,
   LucideChevronDown,
   LucideClock,
+  LucideMonitor,
+  LucideShield,
 } from '@lucide/angular';
 
 interface NavItem {
@@ -48,6 +50,8 @@ interface NavItem {
     LucideX,
     LucideChevronDown,
     LucideClock,
+    LucideMonitor,
+    LucideShield,
     DatePipe,
   ],
   templateUrl: './dashboard-layout.component.html',
@@ -82,12 +86,14 @@ export class DashboardLayoutComponent implements OnInit {
     { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee'] },
     { label: 'Alerts', icon: LucideBell, path: '/employee/alerts', roles: ['Employee'] },
+    { label: 'Desktop Agent', icon: LucideMonitor, path: '/employee/desktop-agent', roles: ['Employee'] },
     { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
     { label: 'Members', icon: LucideUser, path: '/hr/members', roles: ['HR', 'Admin'] },
     { label: 'Teams', icon: LucideUsersRound, path: '/hr/teams', roles: ['HR', 'Admin'] },
     { label: 'Projects', icon: LucideFolderOpen, path: '/hr/projects', roles: ['HR', 'Admin'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },
     { label: 'Alerts', icon: LucideTriangleAlert, path: '/hr/alerts', roles: ['HR', 'Admin'] },
+    { label: 'Trusted Devices', icon: LucideShield, path: '/hr/devices', roles: ['HR', 'Admin'] },
   ];
 
   protected readonly filteredNavItems = computed(() => {

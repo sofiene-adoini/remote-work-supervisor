@@ -6,7 +6,7 @@ const { uIOhook, UiohookKey } = require('uiohook-napi');
 // const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 min — considered "idle"
 const IDLE_THRESHOLD_MS = 1* 60 * 1000; // 5 min — considered "idle" test with 1 min time 
 // const AUTO_BREAK_THRESHOLD_MS = 15 * 60 * 1000; // 15 min — auto-break starts
-const AUTO_BREAK_THRESHOLD_MS = 2 * 60 * 1000; // 15 min — auto-break starts
+const AUTO_BREAK_THRESHOLD_MS = 2 * 60 * 1000; // 2 min — auto-break starts
 const CHECK_INTERVAL_MS = 30 * 1000; // poll every 30 s
 
 // ── Internal state ──────────────────────────────────────────────────
