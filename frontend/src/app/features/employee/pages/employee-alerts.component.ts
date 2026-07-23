@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { LucideCheck, LucideBell } from '@lucide/angular';
+import { Subscription } from 'rxjs';
 import { AlertsService } from '../services/alerts.service';
 import { Alert } from '../models/employee.models';
+import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-alerts',
@@ -34,14 +36,16 @@ import { Alert } from '../models/employee.models';
       } @else {
         <div class="alert-list">
           @for (alert of alerts(); track alert.id) {
-            <div class="alert-item" [class.unread]="!alert.read" (click)="handleMarkRead(alert)">
-              <div class="alert-severity" [class]="'severity-' + alert.severity"></div>
+            <div class="alert-item" [class.unread]="!alert.isRead" (click)="handleMarkRead(alert)">
+              <div class="alert-severity" [class]="'severity-' + alert.severity">
+                <span class="severity-label">{{ alert.severity }}</span>
+              </div>
               <div class="alert-content">
-                <span class="alert-type">{{ alert.type }}</span>
+                <span class="alert-type">{{ alert.title }}</span>
                 <p class="alert-message">{{ alert.message }}</p>
                 <span class="alert-time">{{ alert.createdAt | date:'medium' }}</span>
               </div>
-              @if (!alert.read) {
+              @if (!alert.isRead) {
                 <span class="unread-dot"></span>
               }
             </div>
@@ -53,7 +57,7 @@ import { Alert } from '../models/employee.models';
   styles: [`
     @use 'styles/design-tokens' as t;
 
-    .page-container { max-width: 720px; }
+    .page-container { width: 100%; }
 
     .page-header {
       display: flex;
@@ -129,16 +133,19 @@ import { Alert } from '../models/employee.models';
     }
 
     .alert-severity {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-top: 0.375rem;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: capitalize;
       flex-shrink: 0;
+      margin-top: 0.125rem;
 
-      &.severity-info { background: #3b82f6; }
-      &.severity-warning { background: #d9973b; }
-      &.severity-error { background: #d64545; }
-      &.severity-success { background: #1fb6a6; }
+      &.severity-info { background: #e8f1fb; color: #2b3a67; }
+      &.severity-warning { background: #fef3e2; color: #92610a; }
+      &.severity-critical { background: #fde8e8; color: #b91c1c; }
     }
 
     .alert-content {
@@ -180,15 +187,23 @@ import { Alert } from '../models/employee.models';
     }
   `],
 })
-export class EmployeeAlertsComponent implements OnInit {
+export class EmployeeAlertsComponent implements OnInit, OnDestroy {
   private readonly alertsService = inject(AlertsService);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly alerts = signal<Alert[]>([]);
   protected readonly unreadCount = signal(0);
   protected readonly loading = signal(true);
 
+  private alertSub?: Subscription;
+
   ngOnInit(): void {
     this.loadAlerts();
+    this.subscribeToRealtime();
+  }
+
+  ngOnDestroy(): void {
+    this.alertSub?.unsubscribe();
   }
 
   private loadAlerts(): void {
@@ -203,11 +218,30 @@ export class EmployeeAlertsComponent implements OnInit {
     });
   }
 
+  private subscribeToRealtime(): void {
+    this.alertSub = this.realtime.alertCreated$.subscribe((event: AlertCreatedEvent) => {
+      const newAlert: Alert = {
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        severity: event.severity,
+        message: event.message,
+        isRead: event.isRead,
+        createdAt: event.createdAt,
+        user: event.user,
+        session: event.session,
+      };
+
+      this.alerts.update((list) => [newAlert, ...list]);
+      this.unreadCount.update((c) => c + 1);
+    });
+  }
+
   handleMarkRead(alert: Alert): void {
-    if (alert.read) return;
+    if (alert.isRead) return;
     this.alertsService.markRead(alert.id).subscribe({
       next: () => {
-        this.alerts.update((list) => list.map((a) => a.id === alert.id ? { ...a, read: true } : a));
+        this.alerts.update((list) => list.map((a) => a.id === alert.id ? { ...a, isRead: true } : a));
         this.unreadCount.update((c) => Math.max(0, c - 1));
       },
     });
@@ -216,7 +250,7 @@ export class EmployeeAlertsComponent implements OnInit {
   handleMarkAllRead(): void {
     this.alertsService.markAllRead().subscribe({
       next: () => {
-        this.alerts.update((list) => list.map((a) => ({ ...a, read: true })));
+        this.alerts.update((list) => list.map((a) => ({ ...a, isRead: true })));
         this.unreadCount.set(0);
       },
     });

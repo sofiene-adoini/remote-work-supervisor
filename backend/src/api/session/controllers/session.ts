@@ -1,4 +1,6 @@
 import type { Context } from 'koa';
+import { createAndEmit } from '../../alert/services/notification.service';
+
 const SESSION_UID = 'api::session.session';
 const USER_UID = 'plugin::users-permissions.user';
 
@@ -80,6 +82,14 @@ export default {
 
     emitSessionChanged(session, userId);
 
+    createAndEmit({
+      type: 'clock_in',
+      message: 'Employee clocked in.',
+      severity: 'info',
+      userId,
+      sessionId: session.id,
+    }).catch((err) => strapi.log.error(`[Notification] clock_in alert failed: ${err.message}`));
+
     return ctx.send({ session });
   },
 
@@ -114,6 +124,14 @@ export default {
 
     emitSessionChanged(updated, userId);
 
+    createAndEmit({
+      type: 'clock_out',
+      message: 'Employee clocked out.',
+      severity: 'info',
+      userId,
+      sessionId: updated.id,
+    }).catch((err) => strapi.log.error(`[Notification] clock_out alert failed: ${err.message}`));
+
     return ctx.send({ session: updated });
   },
 
@@ -146,6 +164,17 @@ export default {
     });
 
     emitSessionChanged(updated, userId);
+
+    const reason = (ctx.request.body as any)?.reason;
+    const isAuto = reason === 'auto-idle';
+
+    createAndEmit({
+      type: 'break_started',
+      message: isAuto ? 'Automatic break started due to inactivity.' : 'Break started.',
+      severity: isAuto ? 'warning' : 'info',
+      userId,
+      sessionId: updated.id,
+    }).catch((err) => strapi.log.error(`[Notification] break_started alert failed: ${err.message}`));
 
     return ctx.send({ session: updated });
   },
@@ -185,7 +214,52 @@ export default {
 
     emitSessionChanged(updated, userId);
 
+    createAndEmit({
+      type: 'break_ended',
+      message: `Break ended. Duration: ${breakMinutes} minute${breakMinutes !== 1 ? 's' : ''}.`,
+      severity: 'info',
+      userId,
+      sessionId: updated.id,
+    }).catch((err) => strapi.log.error(`[Notification] break_ended alert failed: ${err.message}`));
+
     return ctx.send({ session: updated });
+  },
+
+  async idleDetected(ctx: Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const session = await strapi.db.query(SESSION_UID).findOne({
+      where: {
+        user: userId,
+        clockIn: { $gte: today.toISOString() },
+        status: { $in: ['active', 'break'] },
+      },
+      orderBy: { clockIn: 'desc' },
+    });
+
+    if (!session) {
+      return ctx.send({ ok: true });
+    }
+
+    const { idleMs } = (ctx.request.body as any) || {};
+    const idleMinutes = idleMs ? Math.round(idleMs / 60000) : undefined;
+    const message = idleMinutes
+      ? `Employee has been idle for ${idleMinutes} minute${idleMinutes !== 1 ? 's' : ''}.`
+      : 'Employee idle detected.';
+
+    await createAndEmit({
+      type: 'idle_detected',
+      message,
+      severity: 'warning',
+      userId,
+      sessionId: session.id,
+    });
+
+    return ctx.send({ ok: true });
   },
 
   async history(ctx: Context) {

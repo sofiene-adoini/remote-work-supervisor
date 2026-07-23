@@ -21,3 +21,7 @@ coverage
 
 Thumbs.db
 remote-work-supervisor-plan (1).md
+PROJECT_CONTEXT.md
+
+# Agent test files
+agent/test-*.js

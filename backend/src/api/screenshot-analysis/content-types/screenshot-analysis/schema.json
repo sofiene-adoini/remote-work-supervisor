@@ -1,0 +1,43 @@
+{
+  "kind": "collectionType",
+  "collectionName": "screenshot_analyses",
+  "info": {
+    "singularName": "screenshot-analysis",
+    "pluralName": "screenshot-analyses",
+    "displayName": "ScreenshotAnalysis"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "capturedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "diffScore": {
+      "type": "decimal",
+      "required": false
+    },
+    "isSuspicious": {
+      "type": "boolean",
+      "default": false
+    },
+    "analysisStatus": {
+      "type": "enumeration",
+      "enum": ["normal", "suspicious", "reviewed"],
+      "default": "normal"
+    },
+    "employee": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "screenshotAnalyses"
+    },
+    "session": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::session.session",
+      "inversedBy": "screenshotAnalyses"
+    }
+  }
+}

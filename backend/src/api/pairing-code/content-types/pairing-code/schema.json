@@ -1,0 +1,21 @@
+{
+  "kind": "collectionType",
+  "collectionName": "pairing_codes",
+  "info": {
+    "singularName": "pairing-code",
+    "pluralName": "pairing-codes",
+    "displayName": "Pairing Code"
+  },
+  "options": { "draftAndPublish": false },
+  "attributes": {
+    "hashedCode": { "type": "string", "required": true, "unique": true },
+    "expiresAt": { "type": "datetime", "required": true },
+    "usedAt": { "type": "datetime" },
+    "active": { "type": "boolean", "default": true },
+    "employee": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

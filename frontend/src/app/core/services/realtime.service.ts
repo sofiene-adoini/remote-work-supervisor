@@ -18,6 +18,18 @@ export interface OvertimeStatusEvent {
   status: string;
 }
 
+export interface AlertCreatedEvent {
+  id: number;
+  type: string;
+  title: string;
+  message: string;
+  severity: 'info' | 'warning' | 'critical';
+  isRead: boolean;
+  createdAt: string;
+  user?: { id: number; fullName?: string };
+  session?: { id: number } | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   private readonly auth = inject(AuthService);
@@ -25,6 +37,7 @@ export class RealtimeService {
 
   readonly sessionChanged$ = new Subject<SessionStatusEvent>();
   readonly overtimeChanged$ = new Subject<OvertimeStatusEvent>();
+  readonly alertCreated$ = new Subject<AlertCreatedEvent>();
 
   connect(): void {
     if (this.socket?.connected) return;
@@ -42,6 +55,10 @@ export class RealtimeService {
 
     this.socket.on('overtime:status-changed', (payload: OvertimeStatusEvent) =>
       this.overtimeChanged$.next(payload),
+    );
+
+    this.socket.on('alert:created', (payload: AlertCreatedEvent) =>
+      this.alertCreated$.next(payload),
     );
 
     this.socket.on('connect_error', (err) => {

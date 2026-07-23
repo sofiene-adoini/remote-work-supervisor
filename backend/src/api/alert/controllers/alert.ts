@@ -10,17 +10,18 @@ export default {
 
     const where: any = { user: userId };
     if (unreadOnly === 'true') {
-      where.read = false;
+      where.isRead = false;
     }
 
     const alerts = await strapi.db.query(ALERT_UID).findMany({
       where,
       orderBy: { createdAt: 'desc' },
       limit: parseInt(limit, 10),
+      populate: ['session'],
     });
 
     const unreadCount = await strapi.db.query(ALERT_UID).count({
-      where: { user: userId, read: false },
+      where: { user: userId, isRead: false },
     });
 
     return ctx.send({ alerts, unreadCount });
@@ -32,7 +33,7 @@ export default {
     const alerts = await strapi.db.query(ALERT_UID).findMany({
       orderBy: { createdAt: 'desc' },
       limit: parseInt(limit, 10),
-      populate: ['user'],
+      populate: ['user', 'session'],
     });
 
     return ctx.send({ alerts });
@@ -43,10 +44,12 @@ export default {
     if (!userId) return ctx.unauthorized('Authentication required');
 
     const { id } = ctx.params;
+    const roleName = ctx.state.user?.role?.name;
+    const isAdminOrHr = roleName === 'HR' || roleName === 'Admin';
 
-    const alert = await strapi.db.query(ALERT_UID).findOne({
-      where: { id: parseInt(id, 10), user: userId },
-    });
+    const alert = isAdminOrHr
+      ? await strapi.db.query(ALERT_UID).findOne({ where: { id: parseInt(id, 10) } })
+      : await strapi.db.query(ALERT_UID).findOne({ where: { id: parseInt(id, 10), user: userId } });
 
     if (!alert) {
       return ctx.notFound('Alert not found');
@@ -54,7 +57,7 @@ export default {
 
     const updated = await strapi.db.query(ALERT_UID).update({
       where: { id: alert.id },
-      data: { read: true },
+      data: { isRead: true },
     });
 
     return ctx.send({ alert: updated });
@@ -64,10 +67,19 @@ export default {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
-    await strapi.db.query(ALERT_UID).updateMany({
-      where: { user: userId, read: false },
-      data: { read: true },
-    });
+    const roleName = ctx.state.user?.role?.name;
+    const isAdminOrHr = roleName === 'HR' || roleName === 'Admin';
+
+    const alerts = isAdminOrHr
+      ? await strapi.db.query(ALERT_UID).findMany({ where: { isRead: false } })
+      : await strapi.db.query(ALERT_UID).findMany({ where: { user: userId, isRead: false } });
+
+    for (const alert of alerts) {
+      await strapi.db.query(ALERT_UID).update({
+        where: { id: alert.id },
+        data: { isRead: true },
+      });
+    }
 
     return ctx.send({ ok: true });
   },

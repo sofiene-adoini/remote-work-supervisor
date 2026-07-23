@@ -478,6 +478,79 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiAgentDeviceAgentDevice extends Struct.CollectionTypeSchema {
+  collectionName: 'agent_devices';
+  info: {
+    displayName: 'Agent Device';
+    pluralName: 'agent-devices';
+    singularName: 'agent-device';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    active: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    agentVersion: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'unknown'>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    deviceId: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    deviceName: Schema.Attribute.String & Schema.Attribute.Required;
+    employee: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    hostname: Schema.Attribute.String & Schema.Attribute.Required;
+    lastIPAddress: Schema.Attribute.String;
+    lastLoginAt: Schema.Attribute.DateTime;
+    lastSeenAt: Schema.Attribute.DateTime;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::agent-device.agent-device'
+    > &
+      Schema.Attribute.Private;
+    logoutAt: Schema.Attribute.DateTime;
+    operatingSystem: Schema.Attribute.String & Schema.Attribute.Required;
+    pairedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    revoked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    revokedAt: Schema.Attribute.DateTime;
+    revokedBy: Schema.Attribute.String;
+    trustExpiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiAgentAgent extends Struct.SingleTypeSchema {
+  collectionName: 'agent_api';
+  info: {
+    displayName: 'Agent';
+    pluralName: 'agents';
+    singularName: 'agent';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::agent.agent'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiAlertAlert extends Struct.CollectionTypeSchema {
   collectionName: 'alerts';
   info: {
@@ -492,17 +565,17 @@ export interface ApiAlertAlert extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    isRead: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'> &
       Schema.Attribute.Private;
     message: Schema.Attribute.Text & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
-    read: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
-    severity: Schema.Attribute.Enumeration<
-      ['info', 'warning', 'error', 'success']
-    > &
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    severity: Schema.Attribute.Enumeration<['info', 'warning', 'critical']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'info'>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
     type: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -560,6 +633,43 @@ export interface ApiOvertimeDeclarationOvertimeDeclaration
   };
 }
 
+export interface ApiPairingCodePairingCode extends Struct.CollectionTypeSchema {
+  collectionName: 'pairing_codes';
+  info: {
+    displayName: 'Pairing Code';
+    pluralName: 'pairing-codes';
+    singularName: 'pairing-code';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    active: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    employee: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    expiresAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    hashedCode: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::pairing-code.pairing-code'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    usedAt: Schema.Attribute.DateTime;
+  };
+}
+
 export interface ApiProjectProject extends Struct.CollectionTypeSchema {
   collectionName: 'projects';
   info: {
@@ -601,6 +711,46 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiScreenshotAnalysisScreenshotAnalysis
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'screenshot_analyses';
+  info: {
+    displayName: 'ScreenshotAnalysis';
+    pluralName: 'screenshot-analyses';
+    singularName: 'screenshot-analysis';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    analysisStatus: Schema.Attribute.Enumeration<
+      ['normal', 'suspicious', 'reviewed']
+    > &
+      Schema.Attribute.DefaultTo<'normal'>;
+    capturedAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    diffScore: Schema.Attribute.Decimal;
+    employee: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    isSuspicious: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    > &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiSessionSession extends Struct.CollectionTypeSchema {
   collectionName: 'sessions';
   info: {
@@ -612,6 +762,7 @@ export interface ApiSessionSession extends Struct.CollectionTypeSchema {
     draftAndPublish: false;
   };
   attributes: {
+    alerts: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'>;
     breakEnd: Schema.Attribute.DateTime;
     breakStart: Schema.Attribute.DateTime;
     clockIn: Schema.Attribute.DateTime & Schema.Attribute.Required;
@@ -626,6 +777,10 @@ export interface ApiSessionSession extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    screenshotAnalyses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    >;
     status: Schema.Attribute.Enumeration<['active', 'break', 'completed']> &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<'active'>;
@@ -1201,6 +1356,10 @@ export interface PluginUsersPermissionsUser
     timestamps: true;
   };
   attributes: {
+    agentDevices: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::agent-device.agent-device'
+    >;
     alerts: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'>;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1238,6 +1397,10 @@ export interface PluginUsersPermissionsUser
       'manyToOne',
       'plugin::users-permissions.role'
     >;
+    screenshotAnalyses: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::screenshot-analysis.screenshot-analysis'
+    >;
     sessions: Schema.Attribute.Relation<'oneToMany', 'api::session.session'>;
     team: Schema.Attribute.Relation<'manyToOne', 'api::team.team'>;
     timeEntries: Schema.Attribute.Relation<
@@ -1268,9 +1431,13 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::agent-device.agent-device': ApiAgentDeviceAgentDevice;
+      'api::agent.agent': ApiAgentAgent;
       'api::alert.alert': ApiAlertAlert;
       'api::overtime-declaration.overtime-declaration': ApiOvertimeDeclarationOvertimeDeclaration;
+      'api::pairing-code.pairing-code': ApiPairingCodePairingCode;
       'api::project.project': ApiProjectProject;
+      'api::screenshot-analysis.screenshot-analysis': ApiScreenshotAnalysisScreenshotAnalysis;
       'api::session.session': ApiSessionSession;
       'api::team-stats.team-stats': ApiTeamStatsTeamStats;
       'api::team.team': ApiTeamTeam;

@@ -14,9 +14,13 @@
       "type": "string",
       "required": true
     },
+    "title": {
+      "type": "string",
+      "required": true
+    },
     "severity": {
       "type": "enumeration",
-      "enum": ["info", "warning", "error", "success"],
+      "enum": ["info", "warning", "critical"],
       "default": "info",
       "required": true
     },
@@ -24,7 +28,7 @@
       "type": "text",
       "required": true
     },
-    "read": {
+    "isRead": {
       "type": "boolean",
       "default": false
     },
@@ -32,6 +36,12 @@
       "type": "relation",
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
+      "inversedBy": "alerts"
+    },
+    "session": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::session.session",
       "inversedBy": "alerts"
     }
   }

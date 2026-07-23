@@ -12,7 +12,7 @@ import { HrTeamsService } from '../services/hr-teams.service';
 import { HrOvertimeService } from '../services/hr-overtime.service';
 import { HrAlertsService } from '../services/hr-alerts.service';
 import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '../models/hr.models';
-import { RealtimeService, SessionStatusEvent } from '../../../core/services/realtime.service';
+import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-hr-dashboard',
@@ -615,6 +615,23 @@ export class HrDashboardComponent implements OnInit {
         this.pendingOvertime.update((list) => list.filter((d) => d.id !== event.declarationId));
         this.refreshStatsFromApi();
       }
+    });
+
+    this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {
+      const newAlert: HrAlert = {
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        severity: event.severity,
+        message: event.message,
+        isRead: event.isRead,
+        createdAt: event.createdAt,
+        user: event.user,
+        session: event.session,
+      };
+
+      this.recentAlerts.update((list) => [newAlert, ...list].slice(0, 5));
+      this.refreshStatsFromApi();
     });
   }
 

@@ -99,9 +99,27 @@ plugin.contentTypes.user.schema.attributes.projects = {
   mappedBy: 'users',
 };
 
+plugin.contentTypes.user.schema.attributes.screenshotAnalyses = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::screenshot-analysis.screenshot-analysis',
+  mappedBy: 'employee',
+};
+
+plugin.contentTypes.user.schema.attributes.agentDevices = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::agent-device.agent-device',
+  mappedBy: 'employee',
+};
+
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';
+  };
+
+  plugin.policies.isAuthenticatedUser = (policyContext) => {
+    return !!policyContext.state?.user?.id;
   };
 
   const originalAuthFactory = plugin.controllers.auth;
@@ -148,6 +166,31 @@ plugin.contentTypes.user.schema.attributes.projects = {
         }
 
         return ctx.send(publicProfile(user));
+      },
+
+      async changePassword(ctx: any) {
+        const result = await authController.changePassword(ctx);
+
+        if (ctx.state.user?.id) {
+          const devices = await strapiInstance.db.query('api::agent-device.agent-device').findMany({
+            where: { employee: ctx.state.user.id, active: true },
+          });
+          const revokedAt = new Date().toISOString();
+          for (const d of devices) {
+            await strapiInstance.db.query('api::agent-device.agent-device').update({
+              where: { id: d.id },
+              data: {
+                active: false,
+                revoked: true,
+                revokedAt,
+                revokedBy: `password-reset:${ctx.state.user.id}`,
+              },
+            });
+          }
+          strapiInstance.log.info(`[auth] All trusted devices revoked for user ${ctx.state.user.id} (password change)`);
+        }
+
+        return result;
       },
 
       async invite(ctx: any) {
@@ -238,7 +281,7 @@ plugin.contentTypes.user.schema.attributes.projects = {
         });
 
         strapiInstance.log.info(
-          `[auth invite] ${fullName} <${email}> can set an initial password with token: ${resetPasswordToken}`
+          `[auth invite] ${fullName} <${email}> invited — password-reset token generated`
         );
 
         const invitedUser = await strapiInstance.db.query(USER_UID).findOne({

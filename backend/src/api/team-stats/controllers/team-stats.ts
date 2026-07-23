@@ -59,7 +59,7 @@ export default {
     });
 
     const unreadAlerts = await strapi.db.query(ALERT_UID).count({
-      where: { read: false },
+      where: { isRead: false },
     });
 
     return ctx.send({

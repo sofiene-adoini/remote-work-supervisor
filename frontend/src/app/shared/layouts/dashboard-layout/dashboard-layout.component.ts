@@ -1,10 +1,12 @@
 import { BreakpointObserver } from '@angular/cdk/layout';
-import { Component, computed, inject, signal, Type } from '@angular/core';
+import { Component, computed, inject, signal, OnInit, Type } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { DatePipe, NgComponentOutlet } from '@angular/common';
-import { map } from 'rxjs';
+import { filter, map } from 'rxjs';
 import { AuthService } from '../../../features/auth/services/auth.service';
+import { AlertsService } from '../../../features/employee/services/alerts.service';
+import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
 import {
   LucideLayoutDashboard,
   LucideUser,
@@ -18,6 +20,8 @@ import {
   LucideX,
   LucideChevronDown,
   LucideClock,
+  LucideMonitor,
+  LucideShield,
 } from '@lucide/angular';
 
 interface NavItem {
@@ -46,15 +50,19 @@ interface NavItem {
     LucideX,
     LucideChevronDown,
     LucideClock,
+    LucideMonitor,
+    LucideShield,
     DatePipe,
   ],
   templateUrl: './dashboard-layout.component.html',
   styleUrl: './dashboard-layout.component.scss',
 })
-export class DashboardLayoutComponent {
+export class DashboardLayoutComponent implements OnInit {
   private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly alertsService = inject(AlertsService);
+  private readonly realtime = inject(RealtimeService);
 
   protected readonly currentUser = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
   protected readonly userRole = computed(() => this.currentUser()?.role?.name ?? 'Employee');
@@ -68,6 +76,7 @@ export class DashboardLayoutComponent {
   protected readonly notificationsOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
   protected readonly currentTime = signal(new Date());
+  protected readonly unreadAlertCount = signal(0);
 
   protected readonly sidebarWidth = computed(() => (this.sidebarCollapsed() ? '64px' : '268px'));
 
@@ -76,12 +85,15 @@ export class DashboardLayoutComponent {
     { label: 'My Time', icon: LucideClock, path: '/employee/time', roles: ['Employee'] },
     { label: 'Projects', icon: LucideFolderOpen, path: '/employee/projects', roles: ['Employee'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/employee/overtime', roles: ['Employee'] },
+    { label: 'Alerts', icon: LucideBell, path: '/employee/alerts', roles: ['Employee'] },
+    { label: 'Desktop Agent', icon: LucideMonitor, path: '/employee/desktop-agent', roles: ['Employee'] },
     { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
     { label: 'Members', icon: LucideUser, path: '/hr/members', roles: ['HR', 'Admin'] },
     { label: 'Teams', icon: LucideUsersRound, path: '/hr/teams', roles: ['HR', 'Admin'] },
     { label: 'Projects', icon: LucideFolderOpen, path: '/hr/projects', roles: ['HR', 'Admin'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },
     { label: 'Alerts', icon: LucideTriangleAlert, path: '/hr/alerts', roles: ['HR', 'Admin'] },
+    { label: 'Trusted Devices', icon: LucideShield, path: '/hr/devices', roles: ['HR', 'Admin'] },
   ];
 
   protected readonly filteredNavItems = computed(() => {
@@ -102,6 +114,29 @@ export class DashboardLayoutComponent {
 
   constructor() {
     const id = setInterval(() => this.currentTime.set(new Date()), 1000);
+  }
+
+  ngOnInit(): void {
+    this.loadUnreadCount();
+    this.subscribeToRealtime();
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+    ).subscribe(() => this.loadUnreadCount());
+  }
+
+  private loadUnreadCount(): void {
+    if (this.userRole() !== 'Employee') return;
+    this.alertsService.getMyAlerts(1, true).subscribe({
+      next: (res) => this.unreadAlertCount.set(res.unreadCount),
+    });
+  }
+
+  private subscribeToRealtime(): void {
+    this.realtime.alertCreated$.subscribe((event: AlertCreatedEvent) => {
+      if (event.user?.id === this.currentUser()?.id) {
+        this.unreadAlertCount.update((c) => c + 1);
+      }
+    });
   }
 
   protected toggleSidebar(): void {

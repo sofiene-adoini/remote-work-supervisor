@@ -33,11 +33,23 @@
       "type": "integer",
       "default": 0
     },
+    "screenshotAnalyses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::screenshot-analysis.screenshot-analysis",
+      "mappedBy": "session"
+    },
     "user": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "sessions"
+    },
+    "alerts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::alert.alert",
+      "mappedBy": "session"
     }
   }
 }

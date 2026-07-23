@@ -1,12 +1,14 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight } from '@lucide/angular';
 import { TodaysStatusComponent } from '../components/todays-status.component';
 import { TimeEntriesService } from '../services/time-entries.service';
 import { AlertsService } from '../services/alerts.service';
 import { ProjectsService } from '../services/projects.service';
 import { Session, Alert, Project } from '../models/employee.models';
+import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-dashboard',
@@ -105,7 +107,7 @@ import { Session, Alert, Project } from '../models/employee.models';
           } @else {
             <div class="alert-list">
               @for (alert of recentAlerts(); track alert.id) {
-                <div class="alert-row" [class.unread]="!alert.read">
+                <div class="alert-row" [class.unread]="!alert.isRead">
                   <div class="alert-dot" [class]="'dot-' + alert.severity"></div>
                   <div class="alert-content">
                     <p class="alert-message">{{ alert.message }}</p>
@@ -361,10 +363,12 @@ import { Session, Alert, Project } from '../models/employee.models';
     }
   `],
 })
-export class EmployeeDashboardComponent implements OnInit {
+export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   private readonly timeService = inject(TimeEntriesService);
   private readonly alertsService = inject(AlertsService);
   private readonly projectsService = inject(ProjectsService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly currentSession = signal<Session | null>(null);
   protected readonly currentStatus = signal<'clocked_out' | 'active' | 'break'>('clocked_out');
@@ -399,6 +403,27 @@ export class EmployeeDashboardComponent implements OnInit {
     this.loadWeeklyHours();
     this.loadRecentAlerts();
     this.loadProjectCount();
+    this.subscribeToRealtime();
+  }
+
+  ngOnDestroy(): void {}
+
+  private subscribeToRealtime(): void {
+    this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {
+      const newAlert: Alert = {
+        id: event.id,
+        type: event.type,
+        title: event.title,
+        severity: event.severity,
+        message: event.message,
+        isRead: event.isRead,
+        createdAt: event.createdAt,
+        user: event.user,
+        session: event.session,
+      };
+
+      this.recentAlerts.update((list) => [newAlert, ...list].slice(0, 5));
+    });
   }
 
   private loadStatus(): void {

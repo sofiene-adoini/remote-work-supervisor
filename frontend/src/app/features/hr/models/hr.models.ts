@@ -37,10 +37,12 @@ export interface HrOvertimeDeclaration {
 export interface HrAlert {
   id: number;
   type: string;
-  severity: 'info' | 'warning' | 'error' | 'success';
+  title: string;
+  severity: 'info' | 'warning' | 'critical';
   message: string;
-  read: boolean;
-  user?: { id: number; fullName: string };
+  isRead: boolean;
+  user?: { id: number; fullName?: string };
+  session?: { id: number } | null;
   createdAt: string;
 }
 
