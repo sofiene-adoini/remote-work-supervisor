@@ -41,7 +41,7 @@
               @if (!sidebarCollapsed()) {
                 <span class="nav-label">{{ item.label }}</span>
               }
-              @if (item.path === '/employee/alerts' && unreadAlertCount() > 0) {
+              @if ((item.path === '/employee/alerts' || item.path === '/hr/alerts') && unreadAlertCount() > 0) {
                 <span class="nav-badge">{{ unreadAlertCount() > 99 ? '99+' : unreadAlertCount() }}</span>
               }
             </a>

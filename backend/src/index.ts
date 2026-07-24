@@ -1,6 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { Server, Socket } from 'socket.io';
 import { createAndEmit } from './api/alert/services/notification.service';
+import { emitSessionUpdate } from './api/session/controllers/session';
 
 const USER_UID = 'plugin::users-permissions.user';
 const OFFLINE_GRACE_MS = 15_000;
@@ -51,6 +52,10 @@ export default {
       // ── Room joining (agent + dashboard) ──────────────────────────
       socket.join(`user:${user.id}`);
 
+      if (clientType !== 'agent') {
+        socket.join(`employee:${user.id}`);
+      }
+
       if (user.team?.id) {
         socket.join(`team:${user.team.id}`);
       }
@@ -91,6 +96,7 @@ export default {
           prevSocket.disconnect(true);
         }
         agentSockets.set(user.id, socket);
+        emitSessionUpdate(user.id).catch(() => {});
 
         strapi.log.info(`[Realtime Agent] Employee ${user.id} (${user.fullName}) connected`);
       } else {
@@ -103,8 +109,38 @@ export default {
           agentSockets.delete(user.id);
 
           // Start grace timer
-          const timer = setTimeout(() => {
+          const timer = setTimeout(async () => {
             offlineTimers.delete(user.id);
+
+            // Auto clock-out if still active
+            try {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const activeSession = await strapi.db.query('api::session.session').findOne({
+                where: {
+                  user: user.id,
+                  clockIn: { $gte: today.toISOString() },
+                  status: { $in: ['active', 'break'] },
+                },
+                orderBy: { clockIn: 'desc' },
+              });
+
+              if (activeSession) {
+                await strapi.db.query('api::session.session').update({
+                  where: { id: activeSession.id },
+                  data: {
+                    clockOut: new Date().toISOString(),
+                    status: 'completed',
+                    breakEnd: activeSession.breakStart && !activeSession.breakEnd
+                      ? new Date().toISOString()
+                      : activeSession.breakEnd,
+                  },
+                });
+                strapi.log.info(`[Realtime Agent] Auto clock-out for employee ${user.id} (agent offline)`);
+              }
+            } catch (err: any) {
+              strapi.log.error(`[Realtime Agent] Auto clock-out failed for employee ${user.id}: ${err.message}`);
+            }
 
             createAndEmit({
               type: 'agent_offline',
@@ -114,6 +150,7 @@ export default {
               userId: user.id,
             }).catch((err: any) => strapi.log.error(`[Realtime Agent] agent_offline alert failed: ${err.message}`));
 
+            emitSessionUpdate(user.id).catch(() => {});
             strapi.log.info(`[Realtime Agent] Offline alert emitted for employee ${user.id}`);
           }, OFFLINE_GRACE_MS);
 

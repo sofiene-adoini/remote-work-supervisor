@@ -7,15 +7,15 @@ import { TodaysStatusComponent } from '../components/todays-status.component';
 import { TimeEntriesService } from '../services/time-entries.service';
 import { AlertsService } from '../services/alerts.service';
 import { ProjectsService } from '../services/projects.service';
-import { Session, Alert, Project } from '../models/employee.models';
-import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
+import { Alert } from '../models/employee.models';
+import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-dashboard',
   imports: [RouterLink, DatePipe, LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight, TodaysStatusComponent],
   template: `
     <div class="dashboard-grid">
-      <!-- Today's Status (full-width) -->
+      <!-- Desktop Agent Status (full-width, read-only) -->
       @if (statusLoading()) {
         <div class="grid-full">
           <div class="sk-status-card">
@@ -24,13 +24,13 @@ import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realt
               <div class="sk" style="width: 80px; height: 28px; border-radius: 999px;"></div>
             </div>
             <div class="sk-status-body">
-              <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                <div class="sk sk-num-lg"></div>
-                <div class="sk sk-text-sm" style="width: 80px;"></div>
-              </div>
-              <div style="display: flex; gap: 0.75rem;">
-                <div class="sk" style="width: 100px; height: 40px; border-radius: var(--rws-radius);"></div>
-                <div class="sk" style="width: 110px; height: 40px; border-radius: var(--rws-radius);"></div>
+              <div class="sk-grid">
+                @for (i of [1,2,3,4,5,6]; track i) {
+                  <div class="sk-item">
+                    <div class="sk sk-text-sm"></div>
+                    <div class="sk sk-num"></div>
+                  </div>
+                }
               </div>
             </div>
           </div>
@@ -38,13 +38,14 @@ import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realt
       } @else {
         <app-todays-status
           class="grid-full"
-          [session]="currentSession()"
           [status]="currentStatus()"
-          [loading]="statusLoading()"
-          (onClockIn)="handleClockIn()"
-          (onClockOut)="handleClockOut()"
-          (onStartBreak)="handleStartBreak()"
-          (onEndBreak)="handleEndBreak()"
+          [agentOnline]="agentOnline()"
+          [clockIn]="currentClockIn()"
+          [workedTodayMinutes]="workedTodayMinutes()"
+          [totalBreakMinutes]="totalBreakMinutes()"
+          [weeklyMinutes]="weeklyMinutes()"
+          [currentProject]="currentProject()"
+          [breakStartedAt]="breakStartedAt()"
         />
       }
 
@@ -370,9 +371,16 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly currentSession = signal<Session | null>(null);
   protected readonly currentStatus = signal<'clocked_out' | 'active' | 'break'>('clocked_out');
+  protected readonly agentOnline = signal(false);
+  protected readonly currentClockIn = signal<string | null>(null);
+  protected readonly workedTodayMinutes = signal(0);
+  protected readonly totalBreakMinutes = signal(0);
+  protected readonly weeklyMinutes = signal(0);
+  protected readonly currentProject = signal<{ id: number; name: string } | null>(null);
+  protected readonly breakStartedAt = signal<string | null>(null);
   protected readonly statusLoading = signal(true);
+
   protected readonly weeklyHours = signal<Record<string, number>>({});
   protected readonly weeklyDays = signal<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
   protected readonly weeklyLoading = signal(true);
@@ -399,7 +407,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   };
 
   ngOnInit(): void {
-    this.loadStatus();
+    this.loadInitialStatus();
     this.loadWeeklyHours();
     this.loadRecentAlerts();
     this.loadProjectCount();
@@ -409,6 +417,19 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {}
 
   private subscribeToRealtime(): void {
+    this.realtime.sessionUpdated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: SessionUpdatedEvent) => {
+      this.currentStatus.set(event.status);
+      this.agentOnline.set(event.agentOnline);
+      this.currentClockIn.set(event.clockIn);
+      this.workedTodayMinutes.set(event.workedTodayMinutes);
+      this.totalBreakMinutes.set(event.totalBreakMinutes);
+      this.weeklyMinutes.set(event.weeklyMinutes);
+      this.currentProject.set(event.currentProject);
+      this.breakStartedAt.set(event.breakStartedAt);
+      this.statusLoading.set(false);
+      this.loadWeeklyHours();
+    });
+
     this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {
       const newAlert: Alert = {
         id: event.id,
@@ -426,11 +447,17 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadStatus(): void {
+  private loadInitialStatus(): void {
     this.timeService.getStatus().subscribe({
       next: (res) => {
-        this.currentSession.set(res.session);
         this.currentStatus.set(res.status);
+        this.agentOnline.set(res.agentOnline);
+        this.currentClockIn.set(res.clockIn);
+        this.workedTodayMinutes.set(res.workedTodayMinutes);
+        this.totalBreakMinutes.set(res.totalBreakMinutes);
+        this.weeklyMinutes.set(res.weeklyMinutes);
+        this.currentProject.set(res.currentProject);
+        this.breakStartedAt.set(res.breakStartedAt);
         this.statusLoading.set(false);
       },
       error: () => {
@@ -470,55 +497,6 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
         this.projectsLoading.set(false);
       },
       error: () => this.projectsLoading.set(false),
-    });
-  }
-
-  handleClockIn(): void {
-    this.statusLoading.set(true);
-    this.timeService.clockIn().subscribe({
-      next: (res) => {
-        this.currentSession.set(res.session);
-        this.currentStatus.set('active');
-        this.statusLoading.set(false);
-      },
-      error: () => this.statusLoading.set(false),
-    });
-  }
-
-  handleClockOut(): void {
-    this.statusLoading.set(true);
-    this.timeService.clockOut().subscribe({
-      next: (res) => {
-        this.currentSession.set(res.session);
-        this.currentStatus.set('clocked_out');
-        this.statusLoading.set(false);
-        this.loadWeeklyHours();
-      },
-      error: () => this.statusLoading.set(false),
-    });
-  }
-
-  handleStartBreak(): void {
-    this.statusLoading.set(true);
-    this.timeService.startBreak().subscribe({
-      next: (res) => {
-        this.currentSession.set(res.session);
-        this.currentStatus.set('break');
-        this.statusLoading.set(false);
-      },
-      error: () => this.statusLoading.set(false),
-    });
-  }
-
-  handleEndBreak(): void {
-    this.statusLoading.set(true);
-    this.timeService.endBreak().subscribe({
-      next: (res) => {
-        this.currentSession.set(res.session);
-        this.currentStatus.set('active');
-        this.statusLoading.set(false);
-      },
-      error: () => this.statusLoading.set(false),
     });
   }
 }

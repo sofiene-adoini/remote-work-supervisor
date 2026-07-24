@@ -9,9 +9,16 @@ export class HrAlertsService {
   private readonly http = inject(HttpClient);
   private readonly base = API_BASE_PATH;
 
-  getAllAlerts(limit = 20): Observable<{ alerts: HrAlert[] }> {
-    return this.http.get<{ alerts: HrAlert[] }>(
+  getAllAlerts(limit = 20): Observable<{ alerts: HrAlert[]; unreadCount: number }> {
+    return this.http.get<{ alerts: HrAlert[]; unreadCount: number }>(
       `${this.base}/alerts/all?limit=${limit}`,
+      { withCredentials: true },
+    );
+  }
+
+  getUnreadCount(): Observable<{ unreadCount: number }> {
+    return this.http.get<{ unreadCount: number }>(
+      `${this.base}/alerts/all?limit=1`,
       { withCredentials: true },
     );
   }
