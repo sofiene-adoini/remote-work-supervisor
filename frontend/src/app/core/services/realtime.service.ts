@@ -12,6 +12,20 @@ export interface SessionStatusEvent {
   totalBreakMinutes: number;
 }
 
+export interface SessionUpdatedEvent {
+  userId: number;
+  status: 'clocked_out' | 'active' | 'break';
+  sessionId: number | null;
+  clockIn: string | null;
+  clockOut: string | null;
+  breakStartedAt: string | null;
+  totalBreakMinutes: number;
+  workedTodayMinutes: number;
+  weeklyMinutes: number;
+  currentProject: { id: number; name: string } | null;
+  agentOnline: boolean;
+}
+
 export interface OvertimeStatusEvent {
   declarationId: number;
   userId: number;
@@ -36,6 +50,7 @@ export class RealtimeService {
   private socket: Socket | null = null;
 
   readonly sessionChanged$ = new Subject<SessionStatusEvent>();
+  readonly sessionUpdated$ = new Subject<SessionUpdatedEvent>();
   readonly overtimeChanged$ = new Subject<OvertimeStatusEvent>();
   readonly alertCreated$ = new Subject<AlertCreatedEvent>();
 
@@ -51,6 +66,10 @@ export class RealtimeService {
 
     this.socket.on('session:status-changed', (payload: SessionStatusEvent) =>
       this.sessionChanged$.next(payload),
+    );
+
+    this.socket.on('session:updated', (payload: SessionUpdatedEvent) =>
+      this.sessionUpdated$.next(payload),
     );
 
     this.socket.on('overtime:status-changed', (payload: OvertimeStatusEvent) =>

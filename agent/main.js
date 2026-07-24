@@ -423,6 +423,15 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', async () => {
+  const state = getSessionState();
+  if (state.isAuthenticated && state.status !== 'clocked_out') {
+    try {
+      await clockOut();
+      console.log('[agent] Auto clock-out on exit');
+    } catch {
+      console.warn('[agent] Auto clock-out on exit failed (best-effort)');
+    }
+  }
   await fullTeardown();
   if (process.platform !== 'darwin') {
     app.quit();

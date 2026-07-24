@@ -11,7 +11,15 @@ export interface Session {
 
 export interface SessionResponse {
   status: 'clocked_out' | 'active' | 'break';
-  session: Session | null;
+  sessionId: number | null;
+  clockIn: string | null;
+  clockOut: string | null;
+  breakStartedAt: string | null;
+  totalBreakMinutes: number;
+  workedTodayMinutes: number;
+  weeklyMinutes: number;
+  currentProject: { id: number; name: string } | null;
+  agentOnline: boolean;
 }
 
 export interface WeeklyHoursResponse {

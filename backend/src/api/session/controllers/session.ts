@@ -3,30 +3,113 @@ import { createAndEmit } from '../../alert/services/notification.service';
 
 const SESSION_UID = 'api::session.session';
 const USER_UID = 'plugin::users-permissions.user';
+const PROJECT_UID = 'api::project.project';
 
-function emitSessionChanged(updated: any, userId: number) {
+// ── Rich session update emitter (single source of truth for frontend) ──────
+
+export async function emitSessionUpdate(userId: number) {
   const io = (strapi as any).io;
   if (!io) return;
 
+  const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Latest session today
+  const session = await strapi.db.query(SESSION_UID).findOne({
+    where: {
+      user: userId,
+      clockIn: { $gte: today.toISOString() },
+    },
+    orderBy: { clockIn: 'desc' },
+  });
+
+  let status: 'clocked_out' | 'active' | 'break' = 'clocked_out';
+  let workedTodayMinutes = 0;
+
+  if (session && session.status !== 'completed') {
+    status = session.status === 'break' ? 'break' : 'active';
+
+    const start = new Date(session.clockIn).getTime();
+    const breakMs = (session.totalBreakMinutes || 0) * 60000;
+    const currentBreak =
+      session.breakStart && !session.breakEnd
+        ? now.getTime() - new Date(session.breakStart).getTime()
+        : 0;
+    workedTodayMinutes = Math.max(0, Math.round((now.getTime() - start - breakMs - currentBreak) / 60000));
+  } else if (session && session.status === 'completed') {
+    const start = new Date(session.clockIn).getTime();
+    const end = new Date(session.clockOut).getTime();
+    workedTodayMinutes = Math.max(0, Math.round((end - start - (session.totalBreakMinutes || 0) * 60000) / 60000));
+  }
+
+  // Weekly worked minutes
+  const dayOfWeek = now.getDay();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+
+  const weekSessions = await strapi.db.query(SESSION_UID).findMany({
+    where: {
+      user: userId,
+      clockIn: { $gte: monday.toISOString() },
+    },
+  });
+
+  let weeklyMinutes = 0;
+  for (const s of weekSessions) {
+    const start = new Date(s.clockIn).getTime();
+    const end = s.clockOut ? new Date(s.clockOut).getTime() : now.getTime();
+    weeklyMinutes += Math.max(0, Math.round((end - start - (s.totalBreakMinutes || 0) * 60000) / 60000));
+  }
+
+  // Agent online status
+  const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
+  const agentOnline = agentSockets ? agentSockets.has(userId) : false;
+
+  // Current assigned project (first active project for this user)
+  let currentProject: { id: number; name: string } | null = null;
+  try {
+    const projects = await strapi.db.query(PROJECT_UID).findMany({
+      where: { status: 'active', users: { id: userId } },
+      limit: 1,
+    });
+    if (projects.length > 0) {
+      currentProject = { id: projects[0].id, name: projects[0].name };
+    }
+  } catch {}
+
   const payload = {
     userId,
-    status: updated.status,
-    clockIn: updated.clockIn,
-    clockOut: updated.clockOut ?? null,
-    totalBreakMinutes: updated.totalBreakMinutes ?? 0,
+    status,
+    sessionId: session?.id ?? null,
+    clockIn: session?.clockIn ?? null,
+    clockOut: session?.clockOut ?? null,
+    breakStartedAt: session?.breakStart ?? null,
+    totalBreakMinutes: session?.totalBreakMinutes ?? 0,
+    workedTodayMinutes,
+    weeklyMinutes,
+    currentProject,
+    agentOnline,
   };
 
-  io.to('company').emit('session:status-changed', payload);
-  io.to(`user:${userId}`).emit('session:status-changed', payload);
+  io.to(`employee:${userId}`).emit('session:updated', payload);
 
-  strapi.db.query(USER_UID).findOne({
-    where: { id: userId },
-    populate: ['team'],
-  }).then((user: any) => {
-    if (user?.team?.id) {
-      io.to(`team:${user.team.id}`).emit('session:status-changed', payload);
-    }
-  }).catch(() => {});
+  // Also emit legacy event for backward compat
+  io.to('company').emit('session:status-changed', {
+    userId,
+    status: session?.status ?? 'completed',
+    clockIn: session?.clockIn ?? null,
+    clockOut: session?.clockOut ?? null,
+    totalBreakMinutes: session?.totalBreakMinutes ?? 0,
+  });
+  io.to(`user:${userId}`).emit('session:status-changed', {
+    userId,
+    status: session?.status ?? 'completed',
+    clockIn: session?.clockIn ?? null,
+    clockOut: session?.clockOut ?? null,
+    totalBreakMinutes: session?.totalBreakMinutes ?? 0,
+  });
 }
 
 export default {
@@ -34,6 +117,7 @@ export default {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
+    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -45,11 +129,62 @@ export default {
       orderBy: { clockIn: 'desc' },
     });
 
-    if (!session) {
-      return ctx.send({ status: 'clocked_out', session: null });
+    let status: 'clocked_out' | 'active' | 'break' = 'clocked_out';
+    let workedTodayMinutes = 0;
+
+    if (session && session.status !== 'completed') {
+      status = session.status === 'break' ? 'break' : 'active';
+      const start = new Date(session.clockIn).getTime();
+      const breakMs = (session.totalBreakMinutes || 0) * 60000;
+      const currentBreak = session.breakStart && !session.breakEnd
+        ? now.getTime() - new Date(session.breakStart).getTime() : 0;
+      workedTodayMinutes = Math.max(0, Math.round((now.getTime() - start - breakMs - currentBreak) / 60000));
+    } else if (session && session.status === 'completed') {
+      const start = new Date(session.clockIn).getTime();
+      const end = new Date(session.clockOut).getTime();
+      workedTodayMinutes = Math.max(0, Math.round((end - start - (session.totalBreakMinutes || 0) * 60000) / 60000));
     }
 
-    return ctx.send({ status: session.status, session });
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+
+    const weekSessions = await strapi.db.query(SESSION_UID).findMany({
+      where: { user: userId, clockIn: { $gte: monday.toISOString() } },
+    });
+
+    let weeklyMinutes = 0;
+    for (const s of weekSessions) {
+      const start = new Date(s.clockIn).getTime();
+      const end = s.clockOut ? new Date(s.clockOut).getTime() : now.getTime();
+      weeklyMinutes += Math.max(0, Math.round((end - start - (s.totalBreakMinutes || 0) * 60000) / 60000));
+    }
+
+    const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
+    const agentOnline = agentSockets ? agentSockets.has(userId) : false;
+
+    let currentProject: { id: number; name: string } | null = null;
+    try {
+      const projects = await strapi.db.query(PROJECT_UID).findMany({
+        where: { status: 'active', users: { id: userId } },
+        limit: 1,
+      });
+      if (projects.length > 0) currentProject = { id: projects[0].id, name: projects[0].name };
+    } catch {}
+
+    return ctx.send({
+      status,
+      sessionId: session?.id ?? null,
+      clockIn: session?.clockIn ?? null,
+      clockOut: session?.clockOut ?? null,
+      breakStartedAt: session?.breakStart ?? null,
+      totalBreakMinutes: session?.totalBreakMinutes ?? 0,
+      workedTodayMinutes,
+      weeklyMinutes,
+      currentProject,
+      agentOnline,
+    });
   },
 
   async clockIn(ctx: Context) {
@@ -80,7 +215,7 @@ export default {
       },
     });
 
-    emitSessionChanged(session, userId);
+    await emitSessionUpdate(userId);
 
     createAndEmit({
       type: 'clock_in',
@@ -122,7 +257,7 @@ export default {
       },
     });
 
-    emitSessionChanged(updated, userId);
+    await emitSessionUpdate(userId);
 
     createAndEmit({
       type: 'clock_out',
@@ -163,7 +298,7 @@ export default {
       },
     });
 
-    emitSessionChanged(updated, userId);
+    await emitSessionUpdate(userId);
 
     const reason = (ctx.request.body as any)?.reason;
     const isAuto = reason === 'auto-idle';
@@ -212,7 +347,7 @@ export default {
       },
     });
 
-    emitSessionChanged(updated, userId);
+    await emitSessionUpdate(userId);
 
     createAndEmit({
       type: 'break_ended',

@@ -6,6 +6,7 @@ import { DatePipe, NgComponentOutlet } from '@angular/common';
 import { filter, map } from 'rxjs';
 import { AuthService } from '../../../features/auth/services/auth.service';
 import { AlertsService } from '../../../features/employee/services/alerts.service';
+import { HrAlertsService } from '../../../features/hr/services/hr-alerts.service';
 import { RealtimeService, AlertCreatedEvent } from '../../../core/services/realtime.service';
 import {
   LucideLayoutDashboard,
@@ -62,6 +63,7 @@ export class DashboardLayoutComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly alertsService = inject(AlertsService);
+  private readonly hrAlertsService = inject(HrAlertsService);
   private readonly realtime = inject(RealtimeService);
 
   protected readonly currentUser = toSignal(this.auth.currentUser$, { initialValue: this.auth.currentUser });
@@ -125,10 +127,16 @@ export class DashboardLayoutComponent implements OnInit {
   }
 
   private loadUnreadCount(): void {
-    if (this.userRole() !== 'Employee') return;
-    this.alertsService.getMyAlerts(1, true).subscribe({
-      next: (res) => this.unreadAlertCount.set(res.unreadCount),
-    });
+    const role = this.userRole();
+    if (role === 'HR' || role === 'Admin') {
+      this.hrAlertsService.getUnreadCount().subscribe({
+        next: (res) => this.unreadAlertCount.set(res.unreadCount),
+      });
+    } else {
+      this.alertsService.getMyAlerts(1, true).subscribe({
+        next: (res) => this.unreadAlertCount.set(res.unreadCount),
+      });
+    }
   }
 
   private subscribeToRealtime(): void {

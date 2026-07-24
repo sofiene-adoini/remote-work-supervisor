@@ -36,7 +36,11 @@ export default {
       populate: ['user', 'session'],
     });
 
-    return ctx.send({ alerts });
+    const unreadCount = await strapi.db.query(ALERT_UID).count({
+      where: { isRead: false },
+    });
+
+    return ctx.send({ alerts, unreadCount });
   },
 
   async markRead(ctx: Context) {
