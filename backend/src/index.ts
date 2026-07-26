@@ -1,7 +1,7 @@
 import type { Core } from '@strapi/strapi';
 import { Server, Socket } from 'socket.io';
 import { createAndEmit } from './api/alert/services/notification.service';
-import { emitSessionUpdate } from './api/session/controllers/session';
+import { emitSessionUpdate, startContinuousWorkCheck } from './api/session/controllers/session';
 
 const USER_UID = 'plugin::users-permissions.user';
 const OFFLINE_GRACE_MS = 15_000;
@@ -166,6 +166,39 @@ export default {
     (strapi as any).agentSockets = agentSockets;
 
     strapi.log.info(`[Realtime] Socket.IO server ready`);
+
+    // ── Seed default company work policy ──────────────────────────────
+    const POLICY_UID = 'api::company-work-policy.company-work-policy';
+    try {
+      const existingPolicy = await strapi.db.query(POLICY_UID).findOne({ where: { id: 1 } });
+      if (!existingPolicy) {
+        await strapi.db.query(POLICY_UID).create({
+          data: {
+            id: 1,
+            expectedDailyHours: 8,
+            expectedWeeklyHours: 40,
+            maximumDailyHours: 12,
+            maximumWeeklyHours: 60,
+            minimumBreakMinutes: 30,
+            autoOvertimeEnabled: true,
+            overtimeStartsAfterDailyHours: 8,
+            allowClockInOutsideSchedule: true,
+            allowWeekendWork: false,
+            workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+            lateToleranceMinutes: 5,
+            earlyLeaveToleranceMinutes: 5,
+            maximumContinuousWorkHours: 6,
+            timezone: 'Africa/Tunis',
+          },
+        });
+        strapi.log.info('[Policy] Default company work policy seeded');
+      }
+    } catch (err: any) {
+      strapi.log.error(`[Policy] Failed to seed work policy: ${err.message}`);
+    }
+
+    // ── Start continuous work protection ──────────────────────────────
+    startContinuousWorkCheck();
 
     // ── Cleanup on shutdown ──────────────────────────────────────────
     const cleanup = () => {

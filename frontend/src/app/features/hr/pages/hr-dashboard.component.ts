@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
@@ -11,13 +11,14 @@ import { HrStatsService } from '../services/hr-stats.service';
 import { HrTeamsService } from '../services/hr-teams.service';
 import { HrOvertimeService } from '../services/hr-overtime.service';
 import { HrAlertsService } from '../services/hr-alerts.service';
-import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert } from '../models/hr.models';
+import { HrSettingsService } from '../services/hr-settings.service';
+import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert, HrEmployeeStats } from '../models/hr.models';
 import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-hr-dashboard',
   imports: [
-    RouterLink, DatePipe,
+    RouterLink, DecimalPipe,
     LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
     LucideTimer, LucideCalendarClock, LucideBell, LucideArrowRight,
     LucideCheck, LucideXCircle,
@@ -95,6 +96,58 @@ import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../..
           }
         </div>
 
+        <!-- Employee Work Stats -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Work Statistics</h3>
+          </div>
+          @if (employeeStatsLoading()) {
+            <div class="sk-list">
+              @for (i of [1,2,3]; track i) {
+                <div class="sk sk-row"></div>
+              }
+            </div>
+          } @else if (employeeStatsList().length === 0) {
+            <div class="empty">
+              <svg lucideTimer class="empty-icon"></svg>
+              <p class="empty-text">No employee data</p>
+            </div>
+          } @else {
+            <div class="stats-list">
+              @for (emp of employeeStatsList(); track emp.userId) {
+                <div class="stats-row">
+                  <div class="stats-name">{{ emp.fullName }}</div>
+                  <div class="stats-metrics">
+                    <span class="metric">
+                      <span class="metric-label">Worked</span>
+                      <span class="metric-value">{{ (emp.dailyStats.workedMinutes / 60) | number:'1.1-1' }}h</span>
+                    </span>
+                    <span class="metric">
+                      <span class="metric-label">Expected</span>
+                      <span class="metric-value">{{ (emp.dailyStats.expectedMinutes / 60) | number:'1.1-1' }}h</span>
+                    </span>
+                    <span class="metric">
+                      <span class="metric-label">Weekly</span>
+                      <span class="metric-value">{{ emp.weeklyStats.workedHours }}h</span>
+                    </span>
+                    <span class="eval-badge" [class]="'eval-' + emp.attendanceEvaluation">
+                      {{ emp.attendanceEvaluation }}
+                    </span>
+                  </div>
+                  @if (emp.currentSession) {
+                    <div class="session-info">
+                      <span class="session-status" [class]="'ss-' + emp.currentSession.status">
+                        {{ emp.currentSession.status }}
+                      </span>
+                      <span class="session-duration">{{ emp.currentSession.durationMinutes }}m</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </div>
+
         <!-- Pending Overtime -->
         <div class="card">
           <div class="card-header">
@@ -136,42 +189,6 @@ import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../..
           }
         </div>
 
-        <!-- Recent Alerts -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">System Alerts</h3>
-            <a routerLink="/hr/alerts" class="link-btn">
-              View all <svg lucideArrowRight class="icon-xs"></svg>
-            </a>
-          </div>
-          @if (alertsLoading()) {
-            <div class="sk-list">
-              @for (i of [1,2,3]; track i) {
-                <div class="sk sk-row"></div>
-              }
-            </div>
-          } @else if (recentAlerts().length === 0) {
-            <div class="empty">
-              <svg lucideBell class="empty-icon"></svg>
-              <p class="empty-text">No alerts</p>
-            </div>
-          } @else {
-            <div class="alert-list">
-              @for (alert of recentAlerts(); track alert.id) {
-                <div class="alert-row">
-                  <div class="alert-dot" [class]="'dot-' + alert.severity"></div>
-                  <div class="alert-content">
-                    <p class="alert-message">{{ alert.message }}</p>
-                    <span class="alert-meta">
-                      {{ alert.user?.fullName }} · {{ alert.createdAt | date:'short' }}
-                    </span>
-                  </div>
-                </div>
-              }
-            </div>
-          }
-        </div>
-
         <!-- Quick Actions -->
         <div class="card">
           <div class="card-header">
@@ -188,15 +205,15 @@ import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../..
               <span class="action-label">Overtime</span>
               <span class="action-sub">{{ stats()?.pendingOvertime ?? 0 }} pending</span>
             </a>
-            <a routerLink="/hr/alerts" class="action-card">
-              <svg lucideBell class="action-icon"></svg>
-              <span class="action-label">Alerts</span>
-              <span class="action-sub">{{ stats()?.unreadAlerts ?? 0 }} unread</span>
+            <a routerLink="/hr/settings" class="action-card">
+              <svg lucideTimer class="action-icon"></svg>
+              <span class="action-label">Work Policy</span>
+              <span class="action-sub">Configure rules</span>
             </a>
-            <a routerLink="/hr/teams" class="action-card">
-              <svg lucideUsers class="action-icon"></svg>
-              <span class="action-label">Teams</span>
-              <span class="action-sub">Manage teams</span>
+            <a routerLink="/hr/devices" class="action-card">
+              <svg lucideBell class="action-icon"></svg>
+              <span class="action-label">Devices</span>
+              <span class="action-sub">Manage agents</span>
             </a>
           </div>
         </div>
@@ -555,6 +572,95 @@ import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../..
     .icon-xs { width: 14px; height: 14px; }
     .icon-sm { width: 20px; height: 20px; }
 
+    /* ── Employee Stats List ──────────────────────────────── */
+    .stats-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stats-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+      padding: 0.625rem 0;
+      border-bottom: 1px solid #f0f2f5;
+
+      &:last-child { border-bottom: none; }
+    }
+
+    .stats-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--rws-text);
+    }
+
+    .stats-metrics {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .metric {
+      display: flex;
+      flex-direction: column;
+      gap: 0.0625rem;
+    }
+
+    .metric-label {
+      font-size: 0.625rem;
+      color: var(--rws-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .metric-value {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--rws-text);
+      font-family: var(--rws-font-mono);
+    }
+
+    .eval-badge {
+      padding: 0.1875rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: capitalize;
+
+      &.eval-excellent { background: #e8f8f6; color: #167d72; }
+      &.eval-good { background: #e8f1fb; color: #2b3a67; }
+      &.eval-acceptable { background: #fef3e2; color: #92610a; }
+      &.eval-underworked { background: #fde8e8; color: #d64545; }
+      &.eval-absent { background: #f3f4f6; color: #6b7280; }
+      &.eval-overtime { background: #fef3e2; color: #92610a; }
+      &.eval-break_violation { background: #fde8e8; color: #d64545; }
+    }
+
+    .session-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .session-status {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      text-transform: capitalize;
+
+      &.ss-active { background: #e8f8f6; color: #167d72; }
+      &.ss-break { background: #fef3e2; color: #92610a; }
+    }
+
+    .session-duration {
+      font-size: 0.75rem;
+      color: var(--rws-text-muted);
+      font-family: var(--rws-font-mono);
+    }
+
     @media (max-width: 1023px) {
       .content-grid { grid-template-columns: 1fr; }
     }
@@ -574,6 +680,7 @@ export class HrDashboardComponent implements OnInit {
   private readonly teamsService = inject(HrTeamsService);
   private readonly overtimeService = inject(HrOvertimeService);
   private readonly alertsService = inject(HrAlertsService);
+  private readonly settingsService = inject(HrSettingsService);
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -585,6 +692,8 @@ export class HrDashboardComponent implements OnInit {
   protected readonly overtimeLoading = signal(true);
   protected readonly recentAlerts = signal<HrAlert[]>([]);
   protected readonly alertsLoading = signal(true);
+  protected readonly employeeStatsList = signal<HrEmployeeStats[]>([]);
+  protected readonly employeeStatsLoading = signal(true);
 
   protected readonly statCards = () => {
     const s = this.stats();
@@ -670,6 +779,7 @@ export class HrDashboardComponent implements OnInit {
     this.loadMembers();
     this.loadPendingOvertime();
     this.loadAlerts();
+    this.loadEmployeeStats();
   }
 
   private loadStats(): void {
@@ -709,6 +819,16 @@ export class HrDashboardComponent implements OnInit {
         this.alertsLoading.set(false);
       },
       error: () => this.alertsLoading.set(false),
+    });
+  }
+
+  private loadEmployeeStats(): void {
+    this.settingsService.getAllEmployeeStats().subscribe({
+      next: (res: { employees: HrEmployeeStats[] }) => {
+        this.employeeStatsList.set(res.employees);
+        this.employeeStatsLoading.set(false);
+      },
+      error: () => this.employeeStatsLoading.set(false),
     });
   }
 

@@ -68,3 +68,49 @@ export interface HrProject {
   users: { id: number; fullName: string }[];
   createdAt: string;
 }
+
+export interface HrEmployeeStats {
+  userId: number;
+  fullName: string;
+  email: string;
+  dailyStats: {
+    workedMinutes: number;
+    expectedMinutes: number;
+    overtimeMinutes: number;
+    missingMinutes: number;
+    breakMinutes: number;
+    attendanceStatus: string;
+  };
+  weeklyStats: {
+    expectedHours: number;
+    workedHours: number;
+    overtimeHours: number;
+    missingHours: number;
+    attendanceRate: number;
+    completionRate: number;
+  };
+  attendanceEvaluation: string;
+  currentSession: {
+    status: string;
+    clockIn: string;
+    durationMinutes: number;
+  } | null;
+}
+
+export interface CompanyWorkPolicy {
+  id?: number;
+  expectedDailyHours: number;
+  expectedWeeklyHours: number;
+  maximumDailyHours: number;
+  maximumWeeklyHours: number;
+  minimumBreakMinutes: number;
+  autoOvertimeEnabled: boolean;
+  overtimeStartsAfterDailyHours: number;
+  allowClockInOutsideSchedule: boolean;
+  allowWeekendWork: boolean;
+  workingDays: string[];
+  lateToleranceMinutes: number;
+  earlyLeaveToleranceMinutes: number;
+  maximumContinuousWorkHours: number;
+  timezone: string;
+}

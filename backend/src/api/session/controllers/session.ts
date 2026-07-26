@@ -1,9 +1,68 @@
 import type { Context } from 'koa';
 import { createAndEmit } from '../../alert/services/notification.service';
+import { TimeCalculationService } from '../../company-work-policy/services/time-calculation.service';
+import { WorkPolicyService } from '../../company-work-policy/services/work-policy.service';
 
 const SESSION_UID = 'api::session.session';
 const USER_UID = 'plugin::users-permissions.user';
 const PROJECT_UID = 'api::project.project';
+
+// ── Continuous work protection ───────────────────────────────────────────
+
+let continuousWorkCheckInterval: NodeJS.Timeout | null = null;
+
+export function startContinuousWorkCheck() {
+  if (continuousWorkCheckInterval) return;
+
+  continuousWorkCheckInterval = setInterval(async () => {
+    try {
+      const policy = await WorkPolicyService.get();
+      const maxContinuousMs = policy.maximumContinuousWorkHours * 60 * 60 * 1000;
+      const now = new Date();
+
+      const activeSessions = await strapi.db.query(SESSION_UID).findMany({
+        where: { status: { $in: ['active'] } },
+        populate: ['user'],
+      });
+
+      for (const session of activeSessions) {
+        const userId = typeof session.user === 'object' ? session.user.id : session.user;
+        const sessionStart = new Date(session.clockIn).getTime();
+        const elapsed = now.getTime() - sessionStart;
+        const breakMs = (session.totalBreakMinutes || 0) * 60000;
+        const continuousWorkMs = elapsed - breakMs;
+
+        if (continuousWorkMs > maxContinuousMs) {
+          const continuousHours = Math.round((continuousWorkMs / 60000 / 60) * 10) / 10;
+
+          await createAndEmit({
+            type: 'continuous_work_warning',
+            title: 'Continuous Work Warning',
+            message: `You have been working for ${continuousHours} hours continuously without taking a break. Please take a break.`,
+            severity: 'warning',
+            userId,
+            sessionId: session.id,
+          });
+
+          await createAndEmit({
+            type: 'continuous_work_warning',
+            title: 'Continuous Work Warning',
+            message: `Employee has been working for ${continuousHours} hours continuously without a break.`,
+            severity: 'warning',
+            userId,
+            sessionId: session.id,
+          });
+
+          strapi.log.warn(`[Policy] Continuous work warning: user=${userId} ${continuousHours}h without break`);
+        }
+      }
+    } catch (err: any) {
+      strapi.log.error(`[Policy] Continuous work check failed: ${err.message}`);
+    }
+  }, 5 * 60 * 1000);
+
+  strapi.log.info('[Policy] Continuous work check started (5-minute interval)');
+}
 
 // ── Rich session update emitter (single source of truth for frontend) ──────
 
@@ -15,7 +74,6 @@ export async function emitSessionUpdate(userId: number) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Latest session today
   const session = await strapi.db.query(SESSION_UID).findOne({
     where: {
       user: userId,
@@ -29,45 +87,32 @@ export async function emitSessionUpdate(userId: number) {
 
   if (session && session.status !== 'completed') {
     status = session.status === 'break' ? 'break' : 'active';
-
-    const start = new Date(session.clockIn).getTime();
-    const breakMs = (session.totalBreakMinutes || 0) * 60000;
-    const currentBreak =
-      session.breakStart && !session.breakEnd
-        ? now.getTime() - new Date(session.breakStart).getTime()
-        : 0;
-    workedTodayMinutes = Math.max(0, Math.round((now.getTime() - start - breakMs - currentBreak) / 60000));
+    workedTodayMinutes = TimeCalculationService.computeActiveWorkedMinutes({
+      clockIn: session.clockIn,
+      totalBreakMinutes: session.totalBreakMinutes || 0,
+      breakStart: session.breakStart,
+    }, now);
   } else if (session && session.status === 'completed') {
-    const start = new Date(session.clockIn).getTime();
-    const end = new Date(session.clockOut).getTime();
-    workedTodayMinutes = Math.max(0, Math.round((end - start - (session.totalBreakMinutes || 0) * 60000) / 60000));
+    workedTodayMinutes = TimeCalculationService.computeWorkedMinutes(session, now);
   }
 
-  // Weekly worked minutes
   const dayOfWeek = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
   monday.setHours(0, 0, 0, 0);
 
   const weekSessions = await strapi.db.query(SESSION_UID).findMany({
-    where: {
-      user: userId,
-      clockIn: { $gte: monday.toISOString() },
-    },
+    where: { user: userId, clockIn: { $gte: monday.toISOString() } },
   });
 
   let weeklyMinutes = 0;
   for (const s of weekSessions) {
-    const start = new Date(s.clockIn).getTime();
-    const end = s.clockOut ? new Date(s.clockOut).getTime() : now.getTime();
-    weeklyMinutes += Math.max(0, Math.round((end - start - (s.totalBreakMinutes || 0) * 60000) / 60000));
+    weeklyMinutes += TimeCalculationService.computeWorkedMinutes(s, now);
   }
 
-  // Agent online status
   const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
   const agentOnline = agentSockets ? agentSockets.has(userId) : false;
 
-  // Current assigned project (first active project for this user)
   let currentProject: { id: number; name: string } | null = null;
   try {
     const projects = await strapi.db.query(PROJECT_UID).findMany({
@@ -78,6 +123,11 @@ export async function emitSessionUpdate(userId: number) {
       currentProject = { id: projects[0].id, name: projects[0].name };
     }
   } catch {}
+
+  const [dailyStats, weeklyStats] = await Promise.all([
+    TimeCalculationService.computeDailyStats(userId, now),
+    TimeCalculationService.computeWeeklyStats(userId, monday),
+  ]);
 
   const payload = {
     userId,
@@ -91,11 +141,12 @@ export async function emitSessionUpdate(userId: number) {
     weeklyMinutes,
     currentProject,
     agentOnline,
+    dailyStats,
+    weeklyStats,
   };
 
   io.to(`employee:${userId}`).emit('session:updated', payload);
 
-  // Also emit legacy event for backward compat
   io.to('company').emit('session:status-changed', {
     userId,
     status: session?.status ?? 'completed',
@@ -134,15 +185,13 @@ export default {
 
     if (session && session.status !== 'completed') {
       status = session.status === 'break' ? 'break' : 'active';
-      const start = new Date(session.clockIn).getTime();
-      const breakMs = (session.totalBreakMinutes || 0) * 60000;
-      const currentBreak = session.breakStart && !session.breakEnd
-        ? now.getTime() - new Date(session.breakStart).getTime() : 0;
-      workedTodayMinutes = Math.max(0, Math.round((now.getTime() - start - breakMs - currentBreak) / 60000));
+      workedTodayMinutes = TimeCalculationService.computeActiveWorkedMinutes({
+        clockIn: session.clockIn,
+        totalBreakMinutes: session.totalBreakMinutes || 0,
+        breakStart: session.breakStart,
+      }, now);
     } else if (session && session.status === 'completed') {
-      const start = new Date(session.clockIn).getTime();
-      const end = new Date(session.clockOut).getTime();
-      workedTodayMinutes = Math.max(0, Math.round((end - start - (session.totalBreakMinutes || 0) * 60000) / 60000));
+      workedTodayMinutes = TimeCalculationService.computeWorkedMinutes(session, now);
     }
 
     const dayOfWeek = now.getDay();
@@ -156,9 +205,7 @@ export default {
 
     let weeklyMinutes = 0;
     for (const s of weekSessions) {
-      const start = new Date(s.clockIn).getTime();
-      const end = s.clockOut ? new Date(s.clockOut).getTime() : now.getTime();
-      weeklyMinutes += Math.max(0, Math.round((end - start - (s.totalBreakMinutes || 0) * 60000) / 60000));
+      weeklyMinutes += TimeCalculationService.computeWorkedMinutes(s, now);
     }
 
     const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
@@ -173,6 +220,11 @@ export default {
       if (projects.length > 0) currentProject = { id: projects[0].id, name: projects[0].name };
     } catch {}
 
+    const [dailyStats, weeklyStats] = await Promise.all([
+      TimeCalculationService.computeDailyStats(userId, now),
+      TimeCalculationService.computeWeeklyStats(userId, monday),
+    ]);
+
     return ctx.send({
       status,
       sessionId: session?.id ?? null,
@@ -184,7 +236,48 @@ export default {
       weeklyMinutes,
       currentProject,
       agentOnline,
+      dailyStats,
+      weeklyStats,
     });
+  },
+
+  async dailyStats(ctx: Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const { date } = ctx.query as { date?: string };
+    const targetDate = date ? new Date(date) : new Date();
+    targetDate.setHours(0, 0, 0, 0);
+
+    const stats = await TimeCalculationService.computeDailyStats(userId, targetDate);
+    return ctx.send({ stats });
+  },
+
+  async weeklyStats(ctx: Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+
+    const stats = await TimeCalculationService.computeWeeklyStats(userId, monday);
+    return ctx.send({ stats });
+  },
+
+  async monthlyStats(ctx: Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const { year, month } = ctx.query as { year?: string; month?: string };
+    const now = new Date();
+    const y = year ? parseInt(year, 10) : now.getFullYear();
+    const m = month ? parseInt(month, 10) : now.getMonth() + 1;
+
+    const stats = await TimeCalculationService.computeMonthlyStats(userId, y, m);
+    return ctx.send({ stats });
   },
 
   async clockIn(ctx: Context) {
@@ -204,6 +297,17 @@ export default {
 
     if (existing) {
       return ctx.badRequest('Already clocked in today. Clock out first.');
+    }
+
+    const policy = await WorkPolicyService.get();
+    if (!policy.allowWeekendWork && !WorkPolicyService.isWorkingDay(new Date())) {
+      createAndEmit({
+        type: 'clock_in',
+        title: 'Weekend Work',
+        message: 'Employee clocked in outside scheduled working days.',
+        severity: 'warning',
+        userId,
+      }).catch(() => {});
     }
 
     const session = await strapi.db.query(SESSION_UID).create({
@@ -256,6 +360,34 @@ export default {
         breakEnd: session.breakStart && !session.breakEnd ? new Date().toISOString() : session.breakEnd,
       },
     });
+
+    const policy = await WorkPolicyService.get();
+    const workedMin = TimeCalculationService.computeWorkedMinutes(
+      { clockIn: session.clockIn, clockOut: new Date().toISOString(), totalBreakMinutes: session.totalBreakMinutes || 0, status: 'completed' },
+      new Date(),
+    );
+
+    if (workedMin > policy.maximumDailyHours * 60) {
+      createAndEmit({
+        type: 'overtime_alert',
+        title: 'Daily Maximum Exceeded',
+        message: `Employee worked ${Math.round(workedMin / 60 * 10) / 10} hours today, exceeding the daily maximum of ${policy.maximumDailyHours} hours.`,
+        severity: 'warning',
+        userId,
+        sessionId: updated.id,
+      }).catch(() => {});
+    }
+
+    if ((session.totalBreakMinutes || 0) < policy.minimumBreakMinutes && workedMin >= policy.expectedDailyHours * 60 * 0.5) {
+      createAndEmit({
+        type: 'break_violation',
+        title: 'Insufficient Break Time',
+        message: `Employee took only ${session.totalBreakMinutes || 0} minutes of breaks today. Minimum required is ${policy.minimumBreakMinutes} minutes.`,
+        severity: 'warning',
+        userId,
+        sessionId: updated.id,
+      }).catch(() => {});
+    }
 
     await emitSessionUpdate(userId);
 
@@ -428,17 +560,10 @@ export default {
       orderBy: { clockIn: 'asc' },
     });
 
-    const enriched = sessions.map((s) => {
-      const start = new Date(s.clockIn).getTime();
-      const end = s.clockOut ? new Date(s.clockOut).getTime() : Date.now();
-      const totalMin = (end - start) / 60000;
-      const breakMin = s.totalBreakMinutes || 0;
-      const workedMin = Math.max(0, totalMin - breakMin);
-      return {
-        ...s,
-        workedMinutes: Math.round(workedMin),
-      };
-    });
+    const enriched = sessions.map((s) => ({
+      ...s,
+      workedMinutes: TimeCalculationService.computeWorkedMinutes(s, new Date()),
+    }));
 
     return ctx.send({ sessions: enriched });
   },
@@ -458,17 +583,10 @@ export default {
       orderBy: { clockIn: 'asc' },
     });
 
-    const enriched = sessions.map((s) => {
-      const start = new Date(s.clockIn).getTime();
-      const end = s.clockOut ? new Date(s.clockOut).getTime() : Date.now();
-      const totalMin = (end - start) / 60000;
-      const breakMin = s.totalBreakMinutes || 0;
-      const workedMin = Math.max(0, totalMin - breakMin);
-      return {
-        ...s,
-        workedMinutes: Math.round(workedMin),
-      };
-    });
+    const enriched = sessions.map((s) => ({
+      ...s,
+      workedMinutes: TimeCalculationService.computeWorkedMinutes(s, new Date()),
+    }));
 
     const totalWorkedMin = enriched.reduce((sum, s) => sum + s.workedMinutes, 0);
     const totalBreakMin = enriched.reduce((sum, s) => sum + (s.totalBreakMinutes || 0), 0);
@@ -507,12 +625,7 @@ export default {
       const dayIdx = (sessionDate.getDay() + 6) % 7;
       const dayName = days[dayIdx];
 
-      const start = new Date(session.clockIn).getTime();
-      const end = session.clockOut ? new Date(session.clockOut).getTime() : now.getTime();
-      const totalMinutes = (end - start) / 60000;
-      const breakMin = session.totalBreakMinutes || 0;
-      const workMinutes = Math.max(0, totalMinutes - breakMin);
-
+      const workMinutes = TimeCalculationService.computeWorkedMinutes(session, now);
       hoursByDay[dayName] += Math.round((workMinutes / 60) * 10) / 10;
     }
 

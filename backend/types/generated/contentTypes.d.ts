@@ -587,6 +587,127 @@ export interface ApiAlertAlert extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiCompanyWorkPolicyCompanyWorkPolicy
+  extends Struct.SingleTypeSchema {
+  collectionName: 'company_work_policies';
+  info: {
+    displayName: 'Company Work Policy';
+    pluralName: 'company-work-policies';
+    singularName: 'company-work-policy';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    allowClockInOutsideSchedule: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
+    allowWeekendWork: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<false>;
+    autoOvertimeEnabled: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    earlyLeaveToleranceMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 120;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<5>;
+    expectedDailyHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 24;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<8>;
+    expectedWeeklyHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 168;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<40>;
+    lateToleranceMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 120;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<5>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::company-work-policy.company-work-policy'
+    > &
+      Schema.Attribute.Private;
+    maximumContinuousWorkHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 24;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<6>;
+    maximumDailyHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 24;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<12>;
+    maximumWeeklyHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 168;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<60>;
+    minimumBreakMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 480;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<30>;
+    overtimeStartsAfterDailyHours: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 24;
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<8>;
+    publishedAt: Schema.Attribute.DateTime;
+    timezone: Schema.Attribute.String &
+      Schema.Attribute.DefaultTo<'Africa/Tunis'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    workingDays: Schema.Attribute.JSON &
+      Schema.Attribute.DefaultTo<
+        ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+      >;
+  };
+}
+
 export interface ApiOvertimeDeclarationOvertimeDeclaration
   extends Struct.CollectionTypeSchema {
   collectionName: 'overtime_declarations';
@@ -1434,6 +1555,7 @@ declare module '@strapi/strapi' {
       'api::agent-device.agent-device': ApiAgentDeviceAgentDevice;
       'api::agent.agent': ApiAgentAgent;
       'api::alert.alert': ApiAlertAlert;
+      'api::company-work-policy.company-work-policy': ApiCompanyWorkPolicyCompanyWorkPolicy;
       'api::overtime-declaration.overtime-declaration': ApiOvertimeDeclarationOvertimeDeclaration;
       'api::pairing-code.pairing-code': ApiPairingCodePairingCode;
       'api::project.project': ApiProjectProject;

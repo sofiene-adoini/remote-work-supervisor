@@ -1,21 +1,28 @@
-import { Component, inject, OnInit, OnDestroy, signal, DestroyRef } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight } from '@lucide/angular';
+import {
+  LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight,
+  LucideClock, LucideAlertTriangle, LucideCheckCircle,
+} from '@lucide/angular';
 import { TodaysStatusComponent } from '../components/todays-status.component';
 import { TimeEntriesService } from '../services/time-entries.service';
 import { AlertsService } from '../services/alerts.service';
 import { ProjectsService } from '../services/projects.service';
-import { Alert } from '../models/employee.models';
+import { Alert, DailyStats, WeeklyStats } from '../models/employee.models';
 import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-dashboard',
-  imports: [RouterLink, DatePipe, LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight, TodaysStatusComponent],
+  imports: [
+    RouterLink, DatePipe, DecimalPipe, TitleCasePipe,
+    LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight,
+    LucideClock, LucideAlertTriangle, LucideCheckCircle,
+    TodaysStatusComponent,
+  ],
   template: `
     <div class="dashboard-grid">
-      <!-- Desktop Agent Status (full-width, read-only) -->
       @if (statusLoading()) {
         <div class="grid-full">
           <div class="sk-status-card">
@@ -49,12 +56,61 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
         />
       }
 
+      <!-- Policy-Aware Daily Progress -->
+      @if (dailyStats()) {
+        <div class="card grid-full">
+          <div class="card-header">
+            <h2 class="card-title">Today's Progress</h2>
+            <span class="attendance-badge" [class]="'att-' + dailyStats()!.attendanceStatus">
+              {{ dailyStats()!.attendanceStatus | titlecase }}
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="progress-grid">
+              <div class="progress-stat">
+                <span class="progress-label">Expected</span>
+                <span class="progress-value">{{ dailyStats()!.expectedMinutes / 60 | number:'1.1-1' }}h</span>
+              </div>
+              <div class="progress-stat">
+                <span class="progress-label">Worked</span>
+                <span class="progress-value accent">{{ dailyStats()!.workedMinutes / 60 | number:'1.1-1' }}h</span>
+              </div>
+              <div class="progress-stat">
+                <span class="progress-label">Break</span>
+                <span class="progress-value">{{ dailyStats()!.breakMinutes }}m</span>
+              </div>
+              @if (dailyStats()!.overtimeMinutes > 0) {
+                <div class="progress-stat">
+                  <span class="progress-label">Overtime</span>
+                  <span class="progress-value ot">{{ dailyStats()!.overtimeMinutes / 60 | number:'1.1-1' }}h</span>
+                </div>
+              }
+              @if (dailyStats()!.missingMinutes > 0) {
+                <div class="progress-stat">
+                  <span class="progress-label">Missing</span>
+                  <span class="progress-value missing">{{ dailyStats()!.missingMinutes / 60 | number:'1.1-1' }}h</span>
+                </div>
+              }
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-track">
+                <div class="progress-bar-fill" [style.width.%]="dailyProgressPercent()"></div>
+                @if (dailyStats()!.expectedMinutes > 0) {
+                  <div class="progress-bar-target" [style.left.%]="100"></div>
+                }
+              </div>
+              <span class="progress-bar-label">{{ dailyProgressPercent() | number:'1.0-0' }}%</span>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- This Week -->
       <div class="card grid-half">
         <div class="card-header">
           <h2 class="card-title">This Week</h2>
           @if (!weeklyLoading()) {
-            <span class="card-meta">{{ totalWeekHours() }}h total</span>
+            <span class="card-meta">{{ totalWeekHours() }}h / {{ weeklyStats()?.expectedHours ?? 40 }}h</span>
           }
         </div>
         <div class="card-body">
@@ -80,6 +136,18 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
                 </div>
               }
             </div>
+            @if (weeklyStats()) {
+              <div class="week-summary">
+                <span class="week-stat">
+                  <svg lucideClock class="icon-xs"></svg>
+                  {{ weeklyStats()!.attendanceRate }}% attendance
+                </span>
+                <span class="week-stat">
+                  <svg lucideCheckCircle class="icon-xs"></svg>
+                  {{ weeklyStats()!.completionRate }}% completion
+                </span>
+              </div>
+            }
           }
         </div>
       </div>
@@ -182,6 +250,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
       font-size: 0.8125rem;
       color: var(--rws-text-muted);
       font-weight: 500;
+      font-family: var(--rws-font-mono);
     }
 
     .link-btn {
@@ -199,7 +268,94 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
       &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; border-radius: 4px; }
     }
 
-    // ── Week bars ──────────────────────────────────────────────
+    /* ── Attendance Badge ───────────────────────────────────── */
+    .attendance-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: capitalize;
+
+      &.att-completed { background: #e8f8f6; color: #167d72; }
+      &.att-overtime { background: #fef3e2; color: #92610a; }
+      &.att-underworked { background: #fde8e8; color: #d64545; }
+      &.att-absent { background: #f3f4f6; color: #6b7280; }
+      &.att-day_off { background: #e8f1fb; color: #2b3a67; }
+    }
+
+    /* ── Progress Grid ──────────────────────────────────────── */
+    .progress-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .progress-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .progress-label {
+      font-size: 0.75rem;
+      color: var(--rws-text-muted);
+      font-weight: 500;
+    }
+
+    .progress-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--rws-text);
+      font-family: var(--rws-font-mono);
+
+      &.accent { color: var(--rws-accent); }
+      &.ot { color: #d9973b; }
+      &.missing { color: #d64545; }
+    }
+
+    .progress-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .progress-bar-track {
+      flex: 1;
+      height: 8px;
+      border-radius: 4px;
+      background: var(--rws-bg);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: linear-gradient(90deg, var(--rws-primary), var(--rws-accent));
+      transition: width 400ms ease;
+    }
+
+    .progress-bar-target {
+      position: absolute;
+      top: -2px;
+      bottom: -2px;
+      width: 2px;
+      background: var(--rws-text-muted);
+      border-radius: 1px;
+      transform: translateX(-1px);
+    }
+
+    .progress-bar-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--rws-accent);
+      font-family: var(--rws-font-mono);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* ── Week bars ────────────────────────────────────────────── */
     .week-bars { display: flex; flex-direction: column; gap: 0.5rem; }
 
     .bar-row {
@@ -241,6 +397,24 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
       font-weight: 500;
     }
 
+    .week-summary {
+      display: flex;
+      gap: 1.25rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--rws-border);
+    }
+
+    .week-stat {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-size: 0.8125rem;
+      color: var(--rws-text-muted);
+      font-weight: 500;
+    }
+
+    /* ── Alert List ────────────────────────────────────────── */
     .alert-list-empty {
       display: flex;
       flex-direction: column;
@@ -280,7 +454,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
 
       &.dot-info { background: #3b82f6; }
       &.dot-warning { background: #d9973b; }
-      &.dot-error { background: #d64545; }
+      &.dot-error, &.dot-critical { background: #d64545; }
       &.dot-success { background: #1fb6a6; }
     }
 
@@ -301,7 +475,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
       color: var(--rws-text-muted);
     }
 
-    // ── Quick actions ──────────────────────────────────────────
+    /* ── Quick actions ────────────────────────────────────────── */
     .actions-row {
       display: flex;
       flex-direction: column;
@@ -352,6 +526,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
     @media (max-width: 767px) {
       .dashboard-grid { grid-template-columns: 1fr; }
       .grid-half { grid-column: span 1; }
+      .progress-grid { grid-template-columns: 1fr 1fr; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -381,6 +556,9 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   protected readonly breakStartedAt = signal<string | null>(null);
   protected readonly statusLoading = signal(true);
 
+  protected readonly dailyStats = signal<DailyStats | null>(null);
+  protected readonly weeklyStats = signal<WeeklyStats | null>(null);
+
   protected readonly weeklyHours = signal<Record<string, number>>({});
   protected readonly weeklyDays = signal<string[]>(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
   protected readonly weeklyLoading = signal(true);
@@ -389,10 +567,16 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   protected readonly projectCount = signal(0);
   protected readonly projectsLoading = signal(true);
 
-  protected readonly totalWeekHours = () => {
+  protected readonly totalWeekHours = computed(() => {
     const hours = this.weeklyHours();
     return Object.values(hours).reduce((sum, h) => sum + h, 0).toFixed(1);
-  };
+  });
+
+  protected readonly dailyProgressPercent = computed(() => {
+    const stats = this.dailyStats();
+    if (!stats || stats.expectedMinutes === 0) return 0;
+    return Math.min(100, Math.round((stats.workedMinutes / stats.expectedMinutes) * 100));
+  });
 
   protected readonly barWidth = (day: string) => {
     const hours = this.weeklyHours();
@@ -426,6 +610,8 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
       this.weeklyMinutes.set(event.weeklyMinutes);
       this.currentProject.set(event.currentProject);
       this.breakStartedAt.set(event.breakStartedAt);
+      if (event.dailyStats) this.dailyStats.set(event.dailyStats);
+      if (event.weeklyStats) this.weeklyStats.set(event.weeklyStats);
       this.statusLoading.set(false);
       this.loadWeeklyHours();
     });
@@ -458,6 +644,8 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
         this.weeklyMinutes.set(res.weeklyMinutes);
         this.currentProject.set(res.currentProject);
         this.breakStartedAt.set(res.breakStartedAt);
+        if (res.dailyStats) this.dailyStats.set(res.dailyStats);
+        if (res.weeklyStats) this.weeklyStats.set(res.weeklyStats);
         this.statusLoading.set(false);
       },
       error: () => {

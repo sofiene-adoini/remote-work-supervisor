@@ -6,73 +6,73 @@ export default {
       method: 'GET',
       path: '/sessions/status',
       handler: 'session.currentStatus',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'POST',
       path: '/sessions/clock-in',
       handler: 'session.clockIn',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'POST',
       path: '/sessions/clock-out',
       handler: 'session.clockOut',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'POST',
       path: '/sessions/break-start',
       handler: 'session.startBreak',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'POST',
       path: '/sessions/break-end',
       handler: 'session.endBreak',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'GET',
       path: '/sessions/history',
       handler: 'session.history',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'GET',
       path: '/sessions/today-detail',
       handler: 'session.todayDetail',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'GET',
       path: '/sessions/weekly-hours',
       handler: 'session.weeklyHours',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
     },
     {
       method: 'POST',
       path: '/sessions/idle-detected',
       handler: 'session.idleDetected',
-      config: {
-        policies: [],
-      },
+      config: { policies: [] },
+    },
+    {
+      method: 'GET',
+      path: '/sessions/daily-stats',
+      handler: 'session.dailyStats',
+      config: { policies: [] },
+    },
+    {
+      method: 'GET',
+      path: '/sessions/weekly-stats',
+      handler: 'session.weeklyStats',
+      config: { policies: [] },
+    },
+    {
+      method: 'GET',
+      path: '/sessions/monthly-stats',
+      handler: 'session.monthlyStats',
+      config: { policies: [] },
     },
   ],
 };

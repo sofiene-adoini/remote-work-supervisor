@@ -23,6 +23,7 @@ import {
   LucideClock,
   LucideMonitor,
   LucideShield,
+  LucideSettings,
 } from '@lucide/angular';
 
 interface NavItem {
@@ -53,6 +54,7 @@ interface NavItem {
     LucideClock,
     LucideMonitor,
     LucideShield,
+    LucideSettings,
     DatePipe,
   ],
   templateUrl: './dashboard-layout.component.html',
@@ -96,6 +98,7 @@ export class DashboardLayoutComponent implements OnInit {
     { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },
     { label: 'Alerts', icon: LucideTriangleAlert, path: '/hr/alerts', roles: ['HR', 'Admin'] },
     { label: 'Trusted Devices', icon: LucideShield, path: '/hr/devices', roles: ['HR', 'Admin'] },
+    { label: 'Work Policy', icon: LucideSettings, path: '/hr/settings', roles: ['HR', 'Admin'] },
   ];
 
   protected readonly filteredNavItems = computed(() => {

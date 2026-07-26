@@ -38,4 +38,8 @@ export const HR_ROUTES: Routes = [
     path: 'devices',
     loadComponent: () => import('./pages/hr-devices.component').then((m) => m.HrDevicesComponent),
   },
+  {
+    path: 'settings',
+    loadComponent: () => import('./pages/hr-settings.component').then((m) => m.HrSettingsComponent),
+  },
 ];

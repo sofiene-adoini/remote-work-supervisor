@@ -12,6 +12,30 @@ export interface SessionStatusEvent {
   totalBreakMinutes: number;
 }
 
+export interface DailyStatsEvent {
+  workedMinutes: number;
+  productiveMinutes: number;
+  idleMinutes: number;
+  breakMinutes: number;
+  overtimeMinutes: number;
+  expectedMinutes: number;
+  missingMinutes: number;
+  extraMinutes: number;
+  attendanceStatus: 'completed' | 'underworked' | 'overtime' | 'absent' | 'day_off';
+}
+
+export interface WeeklyStatsEvent {
+  expectedHours: number;
+  workedHours: number;
+  overtimeHours: number;
+  missingHours: number;
+  productiveHours: number;
+  idleHours: number;
+  breakHours: number;
+  attendanceRate: number;
+  completionRate: number;
+}
+
 export interface SessionUpdatedEvent {
   userId: number;
   status: 'clocked_out' | 'active' | 'break';
@@ -24,6 +48,8 @@ export interface SessionUpdatedEvent {
   weeklyMinutes: number;
   currentProject: { id: number; name: string } | null;
   agentOnline: boolean;
+  dailyStats?: DailyStatsEvent;
+  weeklyStats?: WeeklyStatsEvent;
 }
 
 export interface OvertimeStatusEvent {
