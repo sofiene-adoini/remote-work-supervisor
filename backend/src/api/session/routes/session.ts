@@ -74,5 +74,11 @@ export default {
       handler: 'session.monthlyStats',
       config: { policies: [] },
     },
+    {
+      method: 'GET',
+      path: '/sessions/range',
+      handler: 'session.range',
+      config: { policies: [] },
+    },
   ],
 };

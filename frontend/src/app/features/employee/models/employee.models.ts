@@ -1,3 +1,11 @@
+export interface Break {
+  id: number;
+  start: string;
+  end: string | null;
+  duration: number;
+  isAuto: boolean;
+}
+
 export interface Session {
   id: number;
   clockIn: string;
@@ -115,6 +123,7 @@ export interface HrStats {
 
 export interface SessionWithWorked extends Session {
   workedMinutes: number;
+  breaks?: Break[];
 }
 
 export interface SessionHistoryResponse {
@@ -163,10 +172,60 @@ export interface EmployeeWorkStats {
   email: string;
   dailyStats: DailyStats;
   weeklyStats: WeeklyStats;
+  monthlyStats: MonthlyStats;
   attendanceEvaluation: string;
   currentSession: {
     status: string;
     clockIn: string;
     durationMinutes: number;
   } | null;
+}
+
+export interface RangeSessionsResponse {
+  sessions: SessionWithWorked[];
+}
+
+export interface TimelineEvent {
+  time: string;
+  type: 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'auto_break' | 'idle' | 'warning';
+  label: string;
+  detail?: string;
+}
+
+export interface DayDetail {
+  date: string;
+  label: string;
+  dayShort: string;
+  sessions: SessionWithWorked[];
+  totalWorkedMinutes: number;
+  totalBreakMinutes: number;
+  expectedMinutes: number;
+  overtimeMinutes: number;
+  missingMinutes: number;
+  attendanceStatus: DailyStats['attendanceStatus'];
+}
+
+export interface PolicyResponse {
+  policy: CompanyWorkPolicy;
+}
+
+export interface EmployeeStatsResponse {
+  dailyStats: DailyStats;
+  weeklyStats: WeeklyStats;
+  monthlyStats: MonthlyStats;
+  attendanceEvaluation: string;
+  currentSession: {
+    status: string;
+    clockIn: string;
+    durationMinutes: number;
+  } | null;
+}
+
+export type FilterPreset = 'today' | 'yesterday' | 'last-7-days' | 'last-14-days' | 'last-30-days' | 'this-week' | 'previous-week' | 'this-month' | 'previous-month' | 'custom';
+
+export interface FilterState {
+  preset: FilterPreset;
+  start: string;
+  end: string;
+  label: string;
 }

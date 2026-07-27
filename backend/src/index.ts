@@ -74,11 +74,13 @@ export default {
 
       // ── Agent-specific handling ───────────────────────────────────
       if (clientType === 'agent') {
+        const uid = Number(user.id);
+
         // Cancel any pending offline timer
-        if (offlineTimers.has(user.id)) {
-          clearTimeout(offlineTimers.get(user.id)!);
-          offlineTimers.delete(user.id);
-          strapi.log.info(`[Realtime Agent] Offline timer cancelled for employee ${user.id}`);
+        if (offlineTimers.has(uid)) {
+          clearTimeout(offlineTimers.get(uid)!);
+          offlineTimers.delete(uid);
+          strapi.log.info(`[Realtime Agent] Offline timer cancelled for employee ${uid}`);
 
           // Emit "Agent Online" alert (reconnection after disconnect)
           createAndEmit({
@@ -86,17 +88,17 @@ export default {
             title: 'Agent Online',
             message: 'Employee monitoring agent reconnected.',
             severity: 'info',
-            userId: user.id,
+            userId: uid,
           }).catch((err: any) => strapi.log.error(`[Realtime Agent] agent_online alert failed: ${err.message}`));
         }
 
         // Store agent socket (replace previous if exists)
-        const prevSocket = agentSockets.get(user.id);
+        const prevSocket = agentSockets.get(uid);
         if (prevSocket && prevSocket.id !== socket.id) {
           prevSocket.disconnect(true);
         }
-        agentSockets.set(user.id, socket);
-        emitSessionUpdate(user.id).catch(() => {});
+        agentSockets.set(uid, socket);
+        emitSessionUpdate(uid).catch(() => {});
 
         strapi.log.info(`[Realtime Agent] Employee ${user.id} (${user.fullName}) connected`);
       } else {
@@ -106,11 +108,12 @@ export default {
       // ── Disconnect handler ─────────────────────────────────────────
       socket.on('disconnect', () => {
         if (clientType === 'agent') {
-          agentSockets.delete(user.id);
+          const uid = Number(user.id);
+          agentSockets.delete(uid);
 
           // Start grace timer
           const timer = setTimeout(async () => {
-            offlineTimers.delete(user.id);
+            offlineTimers.delete(uid);
 
             // Auto clock-out if still active
             try {
@@ -118,7 +121,7 @@ export default {
               today.setHours(0, 0, 0, 0);
               const activeSession = await strapi.db.query('api::session.session').findOne({
                 where: {
-                  user: user.id,
+                  user: uid,
                   clockIn: { $gte: today.toISOString() },
                   status: { $in: ['active', 'break'] },
                 },
@@ -136,10 +139,10 @@ export default {
                       : activeSession.breakEnd,
                   },
                 });
-                strapi.log.info(`[Realtime Agent] Auto clock-out for employee ${user.id} (agent offline)`);
+                strapi.log.info(`[Realtime Agent] Auto clock-out for employee ${uid} (agent offline)`);
               }
             } catch (err: any) {
-              strapi.log.error(`[Realtime Agent] Auto clock-out failed for employee ${user.id}: ${err.message}`);
+              strapi.log.error(`[Realtime Agent] Auto clock-out failed for employee ${uid}: ${err.message}`);
             }
 
             createAndEmit({
@@ -147,15 +150,15 @@ export default {
               title: 'Agent Offline',
               message: 'Employee monitoring agent disconnected unexpectedly.',
               severity: 'warning',
-              userId: user.id,
+              userId: uid,
             }).catch((err: any) => strapi.log.error(`[Realtime Agent] agent_offline alert failed: ${err.message}`));
 
-            emitSessionUpdate(user.id).catch(() => {});
-            strapi.log.info(`[Realtime Agent] Offline alert emitted for employee ${user.id}`);
+            emitSessionUpdate(uid).catch(() => {});
+            strapi.log.info(`[Realtime Agent] Offline alert emitted for employee ${uid}`);
           }, OFFLINE_GRACE_MS);
 
-          offlineTimers.set(user.id, timer);
-          strapi.log.info(`[Realtime Agent] Employee ${user.id} disconnected — offline timer started (${OFFLINE_GRACE_MS / 1000}s)`);
+          offlineTimers.set(uid, timer);
+          strapi.log.info(`[Realtime Agent] Employee ${uid} disconnected — offline timer started (${OFFLINE_GRACE_MS / 1000}s)`);
         } else {
           strapi.log.info(`[Realtime] user=${user.id} disconnected`);
         }

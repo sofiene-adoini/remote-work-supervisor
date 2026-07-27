@@ -2,7 +2,10 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_PATH } from '../../../core/constants/app.constants';
-import { Session, SessionResponse, WeeklyHoursResponse, SessionHistoryResponse, TodayDetailResponse } from '../models/employee.models';
+import {
+  Session, SessionResponse, WeeklyHoursResponse, SessionHistoryResponse, TodayDetailResponse,
+  RangeSessionsResponse, DailyStats, WeeklyStats, MonthlyStats, EmployeeStatsResponse, CompanyWorkPolicy,
+} from '../models/employee.models';
 
 @Injectable({ providedIn: 'root' })
 export class TimeEntriesService {
@@ -42,5 +45,38 @@ export class TimeEntriesService {
 
   getTodayDetail(): Observable<TodayDetailResponse> {
     return this.http.get<TodayDetailResponse>(`${this.base}/today-detail`, { withCredentials: true });
+  }
+
+  getRangeSessions(start: string, end: string): Observable<RangeSessionsResponse> {
+    return this.http.get<RangeSessionsResponse>(`${this.base}/range`, {
+      params: { start, end },
+      withCredentials: true,
+    });
+  }
+
+  getDailyStats(date: string): Observable<{ stats: DailyStats }> {
+    return this.http.get<{ stats: DailyStats }>(`${this.base}/daily-stats`, {
+      params: { date },
+      withCredentials: true,
+    });
+  }
+
+  getWeeklyStats(): Observable<{ stats: WeeklyStats }> {
+    return this.http.get<{ stats: WeeklyStats }>(`${this.base}/weekly-stats`, { withCredentials: true });
+  }
+
+  getMonthlyStats(year: number, month: number): Observable<{ stats: MonthlyStats }> {
+    return this.http.get<{ stats: MonthlyStats }>(`${this.base}/monthly-stats`, {
+      params: { year: year.toString(), month: month.toString() },
+      withCredentials: true,
+    });
+  }
+
+  getEmployeeStats(): Observable<EmployeeStatsResponse> {
+    return this.http.get<EmployeeStatsResponse>(`${API_BASE_PATH}/work-stats/employee`, { withCredentials: true });
+  }
+
+  getPolicy(): Observable<{ policy: CompanyWorkPolicy }> {
+    return this.http.get<{ policy: CompanyWorkPolicy }>(`${API_BASE_PATH}/work-stats/policy`, { withCredentials: true });
   }
 }

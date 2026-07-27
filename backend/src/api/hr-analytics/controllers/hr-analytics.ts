@@ -176,7 +176,7 @@ export default {
         else if (latestSession.status === 'break') currentStatus = 'break';
         else currentStatus = 'clocked_out';
       }
-      const agentOnline = agentSockets ? agentSockets.has(emp.id) : false;
+      const agentOnline = agentSockets ? agentSockets.has(Number(emp.id)) : false;
 
       const byDay = new Map<string, any[]>();
       for (const s of empSessions) {

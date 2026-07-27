@@ -587,6 +587,39 @@ export interface ApiAlertAlert extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiBreakBreak extends Struct.CollectionTypeSchema {
+  collectionName: 'breaks';
+  info: {
+    displayName: 'Break';
+    pluralName: 'breaks';
+    singularName: 'break';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    duration: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<0>;
+    end: Schema.Attribute.DateTime;
+    isAuto: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<'oneToMany', 'api::break.break'> &
+      Schema.Attribute.Private;
+    publishedAt: Schema.Attribute.DateTime;
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    start: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiCompanyWorkPolicyCompanyWorkPolicy
   extends Struct.SingleTypeSchema {
   collectionName: 'company_work_policies';
@@ -885,6 +918,7 @@ export interface ApiSessionSession extends Struct.CollectionTypeSchema {
   attributes: {
     alerts: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'>;
     breakEnd: Schema.Attribute.DateTime;
+    breaks: Schema.Attribute.Relation<'oneToMany', 'api::break.break'>;
     breakStart: Schema.Attribute.DateTime;
     clockIn: Schema.Attribute.DateTime & Schema.Attribute.Required;
     clockOut: Schema.Attribute.DateTime;
@@ -1555,6 +1589,7 @@ declare module '@strapi/strapi' {
       'api::agent-device.agent-device': ApiAgentDeviceAgentDevice;
       'api::agent.agent': ApiAgentAgent;
       'api::alert.alert': ApiAlertAlert;
+      'api::break.break': ApiBreakBreak;
       'api::company-work-policy.company-work-policy': ApiCompanyWorkPolicyCompanyWorkPolicy;
       'api::overtime-declaration.overtime-declaration': ApiOvertimeDeclarationOvertimeDeclaration;
       'api::pairing-code.pairing-code': ApiPairingCodePairingCode;

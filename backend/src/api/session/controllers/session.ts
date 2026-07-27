@@ -4,6 +4,7 @@ import { TimeCalculationService } from '../../company-work-policy/services/time-
 import { WorkPolicyService } from '../../company-work-policy/services/work-policy.service';
 
 const SESSION_UID = 'api::session.session';
+const BREAK_UID = 'api::break.break';
 const USER_UID = 'plugin::users-permissions.user';
 const PROJECT_UID = 'api::project.project';
 
@@ -70,13 +71,14 @@ export async function emitSessionUpdate(userId: number) {
   const io = (strapi as any).io;
   if (!io) return;
 
+  const uid = Number(userId);
   const now = new Date();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   const session = await strapi.db.query(SESSION_UID).findOne({
     where: {
-      user: userId,
+      user: uid,
       clockIn: { $gte: today.toISOString() },
     },
     orderBy: { clockIn: 'desc' },
@@ -102,7 +104,7 @@ export async function emitSessionUpdate(userId: number) {
   monday.setHours(0, 0, 0, 0);
 
   const weekSessions = await strapi.db.query(SESSION_UID).findMany({
-    where: { user: userId, clockIn: { $gte: monday.toISOString() } },
+    where: { user: uid, clockIn: { $gte: monday.toISOString() } },
   });
 
   let weeklyMinutes = 0;
@@ -111,12 +113,12 @@ export async function emitSessionUpdate(userId: number) {
   }
 
   const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
-  const agentOnline = agentSockets ? agentSockets.has(userId) : false;
+  const agentOnline = agentSockets ? agentSockets.has(uid) : false;
 
   let currentProject: { id: number; name: string } | null = null;
   try {
     const projects = await strapi.db.query(PROJECT_UID).findMany({
-      where: { status: 'active', users: { id: userId } },
+      where: { status: 'active', users: { id: uid } },
       limit: 1,
     });
     if (projects.length > 0) {
@@ -125,12 +127,12 @@ export async function emitSessionUpdate(userId: number) {
   } catch {}
 
   const [dailyStats, weeklyStats] = await Promise.all([
-    TimeCalculationService.computeDailyStats(userId, now),
-    TimeCalculationService.computeWeeklyStats(userId, monday),
+    TimeCalculationService.computeDailyStats(uid, now),
+    TimeCalculationService.computeWeeklyStats(uid, monday),
   ]);
 
   const payload = {
-    userId,
+    userId: uid,
     status,
     sessionId: session?.id ?? null,
     clockIn: session?.clockIn ?? null,
@@ -145,17 +147,17 @@ export async function emitSessionUpdate(userId: number) {
     weeklyStats,
   };
 
-  io.to(`employee:${userId}`).emit('session:updated', payload);
+  io.to(`employee:${uid}`).emit('session:updated', payload);
 
   io.to('company').emit('session:status-changed', {
-    userId,
+    userId: uid,
     status: session?.status ?? 'completed',
     clockIn: session?.clockIn ?? null,
     clockOut: session?.clockOut ?? null,
     totalBreakMinutes: session?.totalBreakMinutes ?? 0,
   });
-  io.to(`user:${userId}`).emit('session:status-changed', {
-    userId,
+  io.to(`user:${uid}`).emit('session:status-changed', {
+    userId: uid,
     status: session?.status ?? 'completed',
     clockIn: session?.clockIn ?? null,
     clockOut: session?.clockOut ?? null,
@@ -168,13 +170,14 @@ export default {
     const userId = ctx.state.user?.id;
     if (!userId) return ctx.unauthorized('Authentication required');
 
+    const uid = Number(userId);
     const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const session = await strapi.db.query(SESSION_UID).findOne({
       where: {
-        user: userId,
+        user: uid,
         clockIn: { $gte: today.toISOString() },
       },
       orderBy: { clockIn: 'desc' },
@@ -200,7 +203,7 @@ export default {
     monday.setHours(0, 0, 0, 0);
 
     const weekSessions = await strapi.db.query(SESSION_UID).findMany({
-      where: { user: userId, clockIn: { $gte: monday.toISOString() } },
+      where: { user: uid, clockIn: { $gte: monday.toISOString() } },
     });
 
     let weeklyMinutes = 0;
@@ -209,20 +212,20 @@ export default {
     }
 
     const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
-    const agentOnline = agentSockets ? agentSockets.has(userId) : false;
+    const agentOnline = agentSockets ? agentSockets.has(uid) : false;
 
     let currentProject: { id: number; name: string } | null = null;
     try {
       const projects = await strapi.db.query(PROJECT_UID).findMany({
-        where: { status: 'active', users: { id: userId } },
+        where: { status: 'active', users: { id: uid } },
         limit: 1,
       });
       if (projects.length > 0) currentProject = { id: projects[0].id, name: projects[0].name };
     } catch {}
 
     const [dailyStats, weeklyStats] = await Promise.all([
-      TimeCalculationService.computeDailyStats(userId, now),
-      TimeCalculationService.computeWeeklyStats(userId, monday),
+      TimeCalculationService.computeDailyStats(uid, now),
+      TimeCalculationService.computeWeeklyStats(uid, monday),
     ]);
 
     return ctx.send({
@@ -422,18 +425,28 @@ export default {
       return ctx.badRequest('No active session found. Clock in first.');
     }
 
+    const now = new Date().toISOString();
+    const reason = (ctx.request.body as any)?.reason;
+    const isAuto = reason === 'auto-idle';
+
     const updated = await strapi.db.query(SESSION_UID).update({
       where: { id: session.id },
       data: {
-        breakStart: new Date().toISOString(),
+        breakStart: now,
         status: 'break',
       },
     });
 
-    await emitSessionUpdate(userId);
+    await strapi.db.query(BREAK_UID).create({
+      data: {
+        start: now,
+        duration: 0,
+        isAuto,
+        session: session.id,
+      },
+    });
 
-    const reason = (ctx.request.body as any)?.reason;
-    const isAuto = reason === 'auto-idle';
+    await emitSessionUpdate(userId);
 
     createAndEmit({
       type: 'break_started',
@@ -478,6 +491,21 @@ export default {
         totalBreakMinutes: (session.totalBreakMinutes || 0) + breakMinutes,
       },
     });
+
+    const activeBreak = await strapi.db.query(BREAK_UID).findOne({
+      where: { session: session.id, end: null },
+      orderBy: { start: 'desc' },
+    });
+
+    if (activeBreak) {
+      await strapi.db.query(BREAK_UID).update({
+        where: { id: activeBreak.id },
+        data: {
+          end: breakEnd.toISOString(),
+          duration: breakMinutes,
+        },
+      });
+    }
 
     await emitSessionUpdate(userId);
 
@@ -558,11 +586,19 @@ export default {
         },
       },
       orderBy: { clockIn: 'asc' },
+      populate: ['breaks'],
     });
 
     const enriched = sessions.map((s) => ({
       ...s,
       workedMinutes: TimeCalculationService.computeWorkedMinutes(s, new Date()),
+      breaks: (s.breaks || []).map((b: any) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        duration: b.duration,
+        isAuto: b.isAuto,
+      })),
     }));
 
     return ctx.send({ sessions: enriched });
@@ -581,6 +617,7 @@ export default {
         clockIn: { $gte: today.toISOString() },
       },
       orderBy: { clockIn: 'asc' },
+      populate: ['breaks'],
     });
 
     const enriched = sessions.map((s) => ({
@@ -596,6 +633,48 @@ export default {
       totalWorkedMinutes: totalWorkedMin,
       totalBreakMinutes: totalBreakMin,
     });
+  },
+
+  async range(ctx: Context) {
+    const userId = ctx.state.user?.id;
+    if (!userId) return ctx.unauthorized('Authentication required');
+
+    const { start, end } = ctx.query as { start?: string; end?: string };
+    if (!start || !end) return ctx.badRequest('start and end query params required (YYYY-MM-DD)');
+
+    const startDate = new Date(start);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await strapi.db.query(SESSION_UID).findMany({
+      where: {
+        user: userId,
+        clockIn: { $gte: startDate.toISOString(), $lte: endDate.toISOString() },
+      },
+      orderBy: { clockIn: 'asc' },
+      populate: ['breaks'],
+    });
+
+    const enriched = sessions.map((s) => ({
+      id: s.id,
+      clockIn: s.clockIn,
+      clockOut: s.clockOut,
+      breakStart: s.breakStart,
+      breakEnd: s.breakEnd,
+      status: s.status,
+      totalBreakMinutes: s.totalBreakMinutes,
+      workedMinutes: TimeCalculationService.computeWorkedMinutes(s, new Date()),
+      breaks: (s.breaks || []).map((b: any) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        duration: b.duration,
+        isAuto: b.isAuto,
+      })),
+    }));
+
+    return ctx.send({ sessions: enriched });
   },
 
   async weeklyHours(ctx: Context) {
