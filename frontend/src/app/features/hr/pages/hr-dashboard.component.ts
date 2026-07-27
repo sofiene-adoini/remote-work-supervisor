@@ -727,6 +727,12 @@ export class HrDashboardComponent implements OnInit {
     });
 
     this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {
+      const alertDate = new Date(event.createdAt);
+      const today = new Date();
+      const isToday = alertDate.getFullYear() === today.getFullYear()
+        && alertDate.getMonth() === today.getMonth()
+        && alertDate.getDate() === today.getDate();
+
       const newAlert: HrAlert = {
         id: event.id,
         type: event.type,
@@ -739,7 +745,9 @@ export class HrDashboardComponent implements OnInit {
         session: event.session,
       };
 
-      this.recentAlerts.update((list) => [newAlert, ...list].slice(0, 5));
+      if (isToday) {
+        this.recentAlerts.update((list) => [newAlert, ...list].slice(0, 5));
+      }
       this.refreshStatsFromApi();
     });
   }
@@ -813,7 +821,7 @@ export class HrDashboardComponent implements OnInit {
   }
 
   private loadAlerts(): void {
-    this.alertsService.getAllAlerts(5).subscribe({
+    this.alertsService.getAllAlerts({ period: 'today', limit: 5 }).subscribe({
       next: (res) => {
         this.recentAlerts.set(res.alerts);
         this.alertsLoading.set(false);

@@ -456,7 +456,7 @@ export class EmployeeTimeComponent implements OnInit, OnDestroy {
   }
 
   private loadSessionAlerts(): void {
-    this.alertsService.getMyAlerts(100).subscribe({
+    this.alertsService.getMyAlerts({ limit: 100, period: 'today' }).subscribe({
       next: (res) => {
         const map = new Map<number, boolean>();
         for (const alert of res.alerts) {

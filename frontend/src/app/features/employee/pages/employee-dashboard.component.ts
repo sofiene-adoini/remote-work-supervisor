@@ -617,6 +617,14 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     });
 
     this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {
+      const alertDate = new Date(event.createdAt);
+      const today = new Date();
+      const isToday = alertDate.getFullYear() === today.getFullYear()
+        && alertDate.getMonth() === today.getMonth()
+        && alertDate.getDate() === today.getDate();
+
+      if (!isToday) return;
+
       const newAlert: Alert = {
         id: event.id,
         type: event.type,
@@ -668,7 +676,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   }
 
   private loadRecentAlerts(): void {
-    this.alertsService.getMyAlerts(5).subscribe({
+    this.alertsService.getMyAlerts({ period: 'today', limit: 5 }).subscribe({
       next: (res) => {
         this.recentAlerts.set(res.alerts);
         this.alertsLoading.set(false);

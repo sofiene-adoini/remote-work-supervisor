@@ -139,7 +139,7 @@ export class DashboardLayoutComponent implements OnInit {
         next: (res) => this.unreadAlertCount.set(res.unreadCount),
       });
     } else {
-      this.alertsService.getMyAlerts(1, true).subscribe({
+      this.alertsService.getMyAlerts({ limit: 1, unreadOnly: true }).subscribe({
         next: (res) => this.unreadAlertCount.set(res.unreadCount),
       });
     }
