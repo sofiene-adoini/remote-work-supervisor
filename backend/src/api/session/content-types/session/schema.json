@@ -50,6 +50,12 @@
       "relation": "oneToMany",
       "target": "api::alert.alert",
       "mappedBy": "session"
+    },
+    "breaks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::break.break",
+      "mappedBy": "session"
     }
   }
 }

@@ -1,0 +1,256 @@
+﻿ÔØ» Building...
+Ô£ö Building...
+Application bundle generation failed. [8.838 seconds] - 2026-07-26T15:00:05.651Z
+
+node.exe : [33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: DecimalPipe is not used within the template of 
+TimeAnalyticsComponent[0m [1m[35m[plugin angular-compiler][0m
+Au caractère Ligne:1 : 1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33mÔû▓ [43;3...r-compiler][0m:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+    src/app/features/employee/components/time/time-analytics.component.ts:40:4:
+[37m      40 Ôöé     [32mDecimalPipe[37m,
+         ÔòÁ     [32m~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideTrendingUp is not used within the template of 
+TimeAnalyticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-analytics.component.ts:42:4:
+[37m      42 Ôöé     [32mLucideTrendingUp[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: TitleCasePipe is not used within the template of 
+TimeDetailsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-details.component.ts:28:4:
+[37m      28 Ôöé     [32mTitleCasePipe[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideFunnel is not used within the template of 
+TimeHistoryComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-history.component.ts:7:67:
+[37m      7 Ôöé ...cideChevronLeft, LucideChevronRight, LucideDownload, [32mLucideFilter[37m],
+        ÔòÁ                                                         [32m~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideActivity is not used within the template of 
+TimeOverviewComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-overview.component.ts:31:4:
+[37m      31 Ôöé     [32mLucideActivity[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: DatePipe is not used within the template of 
+TimeTimelineComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-timeline.component.ts:26:12:
+[37m      26 Ôöé   imports: [[32mDatePipe[37m, LucideLogIn, LucideLogOut, LucideCoffee, Luc...
+         ÔòÁ             [32m~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: DatePipe is not used within the template of 
+TimeWeeklyComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-weekly.component.ts:30:12:
+[37m      30 Ôöé   imports: [[32mDatePipe[37m, LucideAngularModule],
+         ÔòÁ             [32m~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideClock is not used within the template of 
+TodaysStatusComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/todays-status.component.ts:7:22:
+[37m      7 Ôöé   imports: [DatePipe, [32mLucideClock[37m, LucideCoffee, LucideMonitor],
+        ÔòÁ                       [32m~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideTriangleAlert is not used within the template of 
+EmployeeDashboardComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/pages/employee-dashboard.component.ts:21:17:
+[37m      21 Ôöé     LucideClock, [32mLucideAlertTriangle[37m, LucideCheckCircle,
+         ÔòÁ                  [32m~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: DatePipe is not used within the template of 
+EmployeeTimeComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/pages/employee-time.component.ts:98:4:
+[37m      98 Ôöé     [32mDatePipe[37m, LucideClock, LucideBarChart3,
+         ÔòÁ     [32m~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideCalendar is not used within the template of 
+HrStatisticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/hr/pages/hr-statistics.component.ts:28:60:
+[37m      28 Ôöé ...eBarChart3, LucideDownload, LucideSearch, LucideX, [32mLucideCalendar[37m,
+         ÔòÁ                                                       [32m~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideRefreshCw is not used within the template of 
+HrStatisticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/hr/pages/hr-statistics.component.ts:31:4:
+[37m      31 Ôöé     [32mLucideRefreshCw[37m, LucideFilter, LucideArrowUpDown, LucideActivity,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideFunnel is not used within the template of 
+HrStatisticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/hr/pages/hr-statistics.component.ts:31:21:
+[37m      31 Ôöé     LucideRefreshCw, [32mLucideFilter[37m, LucideArrowUpDown, LucideActivity,
+         ÔòÁ                      [32m~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideMonitor is not used within the template of 
+HrStatisticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/hr/pages/hr-statistics.component.ts:32:4:
+[37m      32 Ôöé     [32mLucideMonitor[37m, LucideCoffee, LucideShield,
+         ÔòÁ     [32m~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideShield is not used within the template of 
+HrStatisticsComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/hr/pages/hr-statistics.component.ts:32:33:
+[37m      32 Ôöé     LucideMonitor, LucideCoffee, [32mLucideShield[37m,
+         ÔòÁ                                  [32m~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideLayoutDashboard is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:44:4:
+[37m      44 Ôöé     [32mLucideLayoutDashboard[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideUser is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:45:4:
+[37m      45 Ôöé     [32mLucideUser[37m,
+         ÔòÁ     [32m~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideUsersRound is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:46:4:
+[37m      46 Ôöé     [32mLucideUsersRound[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideFolderOpen is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:47:4:
+[37m      47 Ôöé     [32mLucideFolderOpen[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideTriangleAlert is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:48:4:
+[37m      48 Ôöé     [32mLucideTriangleAlert[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideChartBar is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:49:4:
+[37m      49 Ôöé     [32mLucideChartBar[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideClock is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:55:4:
+[37m      55 Ôöé     [32mLucideClock[37m,
+         ÔòÁ     [32m~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideMonitor is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:56:4:
+[37m      56 Ôöé     [32mLucideMonitor[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideShield is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:57:4:
+[37m      57 Ôöé     [32mLucideShield[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideSettings is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:58:4:
+[37m      58 Ôöé     [32mLucideSettings[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~[0m
+
+
+[33mÔû▓ [43;33m[[43;30mWARNING[43;33m][0m [1mNG8113: LucideChartColumn is not used within the template of 
+DashboardLayoutComponent[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/shared/layouts/dashboard-layout/dashboard-layout.component.ts:59:4:
+[37m      59 Ôöé     [32mLucideBarChart3[37m,
+         ÔòÁ     [32m~~~~~~~~~~~~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2345: Argument of type 'SessionWithWorked' is not assignable to 
+parameter of type 'number'.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-history.component.ts:854:68:
+[37m      854 Ôöé ...nst diffStr = `${diff >= 0 ? '+' : '-'}${this.formatMinutes([32ms[37m)}`;
+          ÔòÁ                                                                [32m^[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG8004: No pipe found with name 'date'.
+To fix this, import the "DatePipe" class from "@angular/common" and add it to the "imports" array of the 
+component.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-monthly.component.ts:132:64:
+[37m      132 Ôöé ... <span class="mobile-day-name">{{ day.date | [32mdate[37m:'EEE' }}</span>
+          ÔòÁ                                                 [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNG8004: No pipe found with name 'date'.
+To fix this, import the "DatePipe" class from "@angular/common" and add it to the "imports" array of the 
+component.[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/components/time/time-monthly.component.ts:221:58:
+[37m      221 Ôöé ..."tooltip-date">{{ tooltipDay()?.date | [32mdate[37m:'EEE, MMM d' }}</div>
+          ÔòÁ                                           [32m~~~~[0m
+
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2322: Type 'import("C:/Users/Lenovo/Desktop/remote-work-supervisor/fro
+ntend/src/app/features/employee/models/employee.models").WeeklyStats | null' is not assignable to type 'import("C:/User
+s/Lenovo/Desktop/remote-work-supervisor/frontend/src/app/features/employee/components/time/time-weekly.component").Week
+lyStats | null'.
+  Type 'WeeklyStats' is missing the following properties from type 'WeeklyStats': totalWorkedMinutes, 
+totalExpectedMinutes, totalOvertimeMinutes, daysWorked, totalDays[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/features/employee/pages/employee-time.component.ts:154:9:
+[37m      154 Ôöé         [[32mweeklyStats[37m]="weeklyStats()"
+          ÔòÁ          [32m~~~~~~~~~~~[0m
+
+

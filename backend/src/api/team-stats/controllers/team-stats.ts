@@ -1,4 +1,5 @@
 import type { Context } from 'koa';
+import { TimeCalculationService } from '../../company-work-policy/services/time-calculation.service';
 const SESSION_UID = 'api::session.session';
 const ALERT_UID = 'api::alert.alert';
 const OT_UID = 'api::overtime-declaration.overtime-declaration';
@@ -25,6 +26,7 @@ export default {
 
     const latestByUser = new Map<number, any>();
     for (const s of todaySessions) {
+      if (!s.user) continue;
       const uid = typeof s.user === 'object' ? s.user.id : s.user;
       if (!latestByUser.has(uid)) latestByUser.set(uid, s);
     }
@@ -46,11 +48,7 @@ export default {
     let totalHoursToday = 0;
     for (const session of todaySessions) {
       if (session.clockIn) {
-        const start = new Date(session.clockIn).getTime();
-        const end = session.clockOut ? new Date(session.clockOut).getTime() : nowMs;
-        const minutes = (end - start) / 60000;
-        const breakMin = session.totalBreakMinutes || 0;
-        totalHoursToday += Math.max(0, (minutes - breakMin) / 60);
+        totalHoursToday += TimeCalculationService.computeWorkedMinutes(session, new Date()) / 60;
       }
     }
 

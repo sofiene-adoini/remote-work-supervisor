@@ -1,0 +1,37 @@
+{
+  "kind": "collectionType",
+  "collectionName": "breaks",
+  "info": {
+    "singularName": "break",
+    "pluralName": "breaks",
+    "displayName": "Break"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "start": {
+      "type": "datetime",
+      "required": true
+    },
+    "end": {
+      "type": "datetime"
+    },
+    "duration": {
+      "type": "integer",
+      "default": 0,
+      "required": true
+    },
+    "isAuto": {
+      "type": "boolean",
+      "default": false,
+      "required": true
+    },
+    "session": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::session.session",
+      "inversedBy": "breaks"
+    }
+  }
+}

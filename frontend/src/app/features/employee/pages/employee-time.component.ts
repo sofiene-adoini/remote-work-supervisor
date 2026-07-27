@@ -1,573 +1,493 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { DatePipe } from '@angular/common';
-import { LucideClock, LucideChevronLeft, LucideChevronRight, LucideCoffee } from '@lucide/angular';
+import { Component, inject, OnInit, OnDestroy, signal, computed, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { LucideClock, LucideBarChart3 } from '@lucide/angular';
 import { TimeEntriesService } from '../services/time-entries.service';
-import { SessionWithWorked, TodayDetailResponse } from '../models/employee.models';
+import { AlertsService } from '../services/alerts.service';
+import { RealtimeService, SessionUpdatedEvent } from '../../../core/services/realtime.service';
+import {
+  SessionWithWorked, DailyStats, WeeklyStats, MonthlyStats,
+  CompanyWorkPolicy, FilterState, FilterPreset, DayDetail,
+} from '../models/employee.models';
+import { TimeFilterBarComponent } from '../components/time/time-filter-bar.component';
+import { TimeOverviewComponent } from '../components/time/time-overview.component';
+import { TimeTimelineComponent } from '../components/time/time-timeline.component';
+import { TimeWeeklyComponent } from '../components/time/time-weekly.component';
+import { TimeMonthlyComponent } from '../components/time/time-monthly.component';
+import { TimeHistoryComponent } from '../components/time/time-history.component';
+import { TimeAnalyticsComponent } from '../components/time/time-analytics.component';
 
-interface DayGroup {
-  label: string;
-  date: string;
-  sessions: SessionWithWorked[];
-  totalMinutes: number;
+function fmt(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function startOfWeek(d: Date): Date {
+  const r = new Date(d);
+  r.setDate(r.getDate() - ((r.getDay() + 6) % 7));
+  r.setHours(0, 0, 0, 0);
+  return r;
+}
+
+function endOfWeek(d: Date): Date {
+  const r = startOfWeek(d);
+  r.setDate(r.getDate() + 6);
+  r.setHours(23, 59, 59, 999);
+  return r;
+}
+
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+function endOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function presetToRange(preset: FilterPreset, customStart?: string, customEnd?: string): { start: string; end: string; label: string } {
+  const today = new Date();
+  const fmtD = (d: Date) => fmt(d);
+
+  switch (preset) {
+    case 'today': {
+      const s = new Date(today); s.setHours(0, 0, 0, 0);
+      return { start: fmtD(s), end: fmtD(s), label: 'Today' };
+    }
+    case 'yesterday': {
+      const s = new Date(today); s.setDate(s.getDate() - 1); s.setHours(0, 0, 0, 0);
+      return { start: fmtD(s), end: fmtD(s), label: 'Yesterday' };
+    }
+    case 'last-7-days': {
+      const s = new Date(today); s.setDate(s.getDate() - 6); s.setHours(0, 0, 0, 0);
+      return { start: fmtD(s), end: fmtD(today), label: 'Last 7 Days' };
+    }
+    case 'last-14-days': {
+      const s = new Date(today); s.setDate(s.getDate() - 13); s.setHours(0, 0, 0, 0);
+      return { start: fmtD(s), end: fmtD(today), label: 'Last 14 Days' };
+    }
+    case 'last-30-days': {
+      const s = new Date(today); s.setDate(s.getDate() - 29); s.setHours(0, 0, 0, 0);
+      return { start: fmtD(s), end: fmtD(today), label: 'Last 30 Days' };
+    }
+    case 'this-week': {
+      const s = startOfWeek(today);
+      return { start: fmtD(s), end: fmtD(today), label: 'This Week' };
+    }
+    case 'previous-week': {
+      const s = new Date(today); s.setDate(s.getDate() - 7);
+      return { start: fmtD(startOfWeek(s)), end: fmtD(endOfWeek(s)), label: 'Previous Week' };
+    }
+    case 'this-month': {
+      const s = startOfMonth(today);
+      return { start: fmtD(s), end: fmtD(today), label: 'This Month' };
+    }
+    case 'previous-month': {
+      const d = new Date(today); d.setMonth(d.getMonth() - 1);
+      return { start: fmtD(startOfMonth(d)), end: fmtD(endOfMonth(d)), label: 'Previous Month' };
+    }
+    case 'custom': {
+      const s = customStart || fmtD(today);
+      const e = customEnd || fmtD(today);
+      return { start: s, end: e, label: `${s} — ${e}` };
+    }
+  }
 }
 
 @Component({
   selector: 'app-employee-time',
-  imports: [DatePipe, LucideClock, LucideChevronLeft, LucideChevronRight, LucideCoffee],
+  imports: [
+    LucideClock, LucideBarChart3,
+    TimeFilterBarComponent, TimeOverviewComponent, TimeTimelineComponent,
+    TimeWeeklyComponent, TimeMonthlyComponent, TimeHistoryComponent,
+    TimeAnalyticsComponent,
+  ],
   template: `
-    <div class="page-container">
+    <div class="page">
       <div class="page-header">
-        <h1 class="page-title">My Time</h1>
+        <div class="header-left">
+          <svg lucideBarChart3 class="header-icon" aria-hidden="true"></svg>
+          <h1 class="page-title">My Time</h1>
+        </div>
+        <span class="page-meta">
+          <svg lucideClock class="icon-xs" aria-hidden="true"></svg>
+          {{ filterState().label }}
+        </span>
       </div>
 
-      <!-- Today's Summary -->
-      @if (todayLoading()) {
-        <div class="today-skeleton">
-          <div class="sk sk-row-lg"></div>
-        </div>
-      } @else {
-        <div class="today-card">
-          <div class="today-header">
-            <h2 class="today-title">Today</h2>
-            @if (todayData()) {
-              <span class="today-date">{{ todayDateStr }}</span>
-            }
-          </div>
-          @if (!todayData() || todayData()!.sessions.length === 0) {
-            <div class="today-empty">
-              <p class="today-empty-text">No sessions recorded today.</p>
-              <p class="today-empty-sub">Clock in from the dashboard to start tracking.</p>
-            </div>
-          } @else {
-            <div class="today-stats">
-              <div class="stat-item">
-                <span class="stat-label">Clock In</span>
-                <span class="stat-value">{{ todayFirstIn() }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Clock Out</span>
-                <span class="stat-value">{{ todayLastOut() }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Breaks</span>
-                <span class="stat-value">
-                  <svg lucideCoffee class="stat-icon" aria-hidden="true"></svg>
-                  {{ todayBreakLabel() }}
-                </span>
-              </div>
-              <div class="stat-item stat-highlight">
-                <span class="stat-label">Total Worked</span>
-                <span class="stat-value stat-main">{{ todayWorkedLabel() }}</span>
-              </div>
-            </div>
-            @if (todayData()!.sessions.length > 1) {
-              <div class="today-sessions">
-                <span class="today-sessions-label">{{ todayData()!.sessions.length }} sessions today</span>
-              </div>
-            }
-          }
-        </div>
+      <app-time-overview
+        [dailyStats]="dailyStats()"
+        [weeklyStats]="weeklyStats()"
+        [monthlyStats]="monthlyStats()"
+        [status]="currentStatus()"
+        [agentOnline]="agentOnline()"
+        [policy]="policy()"
+        [loading]="loading()"
+      />
+
+      @if (currentStatus() !== 'clocked_out') {
+        <app-time-timeline
+          [sessions]="todaySessions()"
+          [loading]="loading()"
+        />
       }
 
-      <!-- Week Navigation -->
-      <div class="week-nav">
-        <button class="week-btn" type="button" (click)="prevWeek()" aria-label="Previous week">
-          <svg lucideChevronLeft class="icon-sm" aria-hidden="true"></svg>
-        </button>
-        <span class="week-label">{{ weekLabel() }}</span>
-        <button class="week-btn" type="button" (click)="nextWeek()" [disabled]="isCurrentWeek()" aria-label="Next week">
-          <svg lucideChevronRight class="icon-sm" aria-hidden="true"></svg>
-        </button>
+      <app-time-filter-bar
+        [activePreset]="filterState().preset"
+        [loading]="loading()"
+        (presetChange)="onPresetChange($event)"
+      />
+
+      <div class="dual-row">
+        <div class="dual-col">
+          <app-time-weekly
+            [weekDays]="weekDays()"
+            [weeklyStats]="weeklyStats()"
+            [loading]="loading()"
+          />
+        </div>
+        <div class="dual-col">
+          <app-time-monthly
+            [monthlyStats]="monthlyStats()"
+            [dailySessions]="rangeSessions()"
+            [policy]="policy()"
+            [loading]="loading()"
+          />
+        </div>
       </div>
 
-      <!-- Weekly Session Log -->
-      @if (historyLoading()) {
-        <div class="sk-list">
-          @for (i of [1,2,3,4,5]; track i) {
-            <div class="sk sk-row-lg"></div>
-          }
-        </div>
-      } @else if (dayGroups().length === 0) {
-        <div class="empty-state">
-          <svg lucideClock class="empty-icon" aria-hidden="true"></svg>
-          <p class="empty-text">No sessions this week</p>
-        </div>
-      } @else {
-        <div class="day-groups">
-          @for (group of dayGroups(); track group.date) {
-            <div class="day-group">
-              <div class="day-header">
-                <span class="day-name">{{ group.label }}</span>
-                <span class="day-total">{{ formatMinutes(group.totalMinutes) }}</span>
-              </div>
-              <div class="session-rows">
-                @for (session of group.sessions; track session.id) {
-                  <div class="session-row">
-                    <div class="session-times">
-                      <span class="session-in">{{ formatTime(session.clockIn) }}</span>
-                      <span class="session-arrow">&rarr;</span>
-                      <span class="session-out">{{ session.clockOut ? formatTime(session.clockOut) : 'now' }}</span>
-                    </div>
-                    <div class="session-details">
-                      @if (session.totalBreakMinutes > 0) {
-                        <span class="session-break">
-                          <svg lucideCoffee class="icon-xs" aria-hidden="true"></svg>
-                          {{ session.totalBreakMinutes }}m break
-                        </span>
-                      }
-                      <span class="session-worked">{{ formatMinutes(session.workedMinutes) }}</span>
-                    </div>
-                  </div>
-                }
-              </div>
-            </div>
-          }
-          <div class="week-summary">
-            <span class="week-summary-label">Total this week</span>
-            <span class="week-summary-value">{{ formatMinutes(weekTotalMinutes()) }}</span>
-          </div>
-        </div>
-      }
+      <app-time-history
+        [sessions]="rangeSessions()"
+        [loading]="loading()"
+        [policy]="policy()"
+        [sessionAlerts]="sessionAlerts()"
+      />
+
+      <app-time-analytics
+        [dailyStats]="dailyStats()"
+        [weeklyStats]="weeklyStats()"
+        [monthlyStats]="monthlyStats()"
+        [dailyHistory]="dailyHistory()"
+        [attendanceEvaluation]="attendanceEvaluation()"
+        [loading]="loading()"
+      />
     </div>
   `,
   styles: [`
     @use 'styles/design-tokens' as t;
 
-    .page-container { width: 100%; }
+    .page {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
 
-    .page-header { margin-bottom: 1.5rem; }
+    .page-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+    }
+
+    .header-icon {
+      width: 28px;
+      height: 28px;
+      color: var(--rws-accent);
+    }
 
     .page-title {
       margin: 0;
-      font-size: 1.5rem;
+      font-size: 1.625rem;
       font-weight: 700;
-      color: var(--rws-text);
+      color: var(--rws-primary);
+      letter-spacing: -0.02em;
     }
 
-    .icon-sm { width: 16px; height: 16px; }
-    .icon-xs { width: 13px; height: 13px; }
-
-    // ── Today's card ────────────────────────────────────────────
-    .today-card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .today-skeleton {
-      margin-bottom: 1.5rem;
-    }
-
-    .today-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1.25rem;
-    }
-
-    .today-title {
-      margin: 0;
-      font-size: 1.0625rem;
-      font-weight: 600;
-      color: var(--rws-text);
-    }
-
-    .today-date {
-      font-size: 0.8125rem;
-      color: var(--rws-text-muted);
-      font-weight: 500;
-    }
-
-    .today-empty {
-      text-align: center;
-      padding: 1.5rem 0 0.5rem;
-    }
-
-    .today-empty-text {
-      margin: 0 0 0.25rem;
-      font-size: 0.9375rem;
-      font-weight: 500;
-      color: var(--rws-text);
-    }
-
-    .today-empty-sub {
-      margin: 0;
-      font-size: 0.8125rem;
-      color: var(--rws-text-muted);
-    }
-
-    .today-stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .stat-label {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: var(--rws-text-muted);
-    }
-
-    .stat-value {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--rws-text);
+    .page-meta {
       display: flex;
       align-items: center;
       gap: 0.375rem;
-    }
-
-    .stat-icon { width: 14px; height: 14px; color: #92610a; }
-
-    .stat-highlight {
-      background: var(--rws-bg);
-      border-radius: var(--rws-radius);
-      padding: 0.75rem 1rem;
-    }
-
-    .stat-main {
-      font-size: 1.25rem;
-      font-family: var(--rws-font-mono);
-      font-weight: 700;
-      color: var(--rws-accent-strong);
-    }
-
-    .today-sessions {
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
-      border-top: 1px solid var(--rws-border);
-    }
-
-    .today-sessions-label {
       font-size: 0.8125rem;
       color: var(--rws-text-muted);
-    }
-
-    // ── Week navigation ─────────────────────────────────────────
-    .week-nav {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 1rem;
-      margin-bottom: 1.25rem;
-    }
-
-    .week-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 32px;
-      height: 32px;
+      font-weight: 500;
+      padding: 0.375rem 0.75rem;
+      background: var(--rws-bg);
+      border-radius: 999px;
       border: 1px solid var(--rws-border);
-      border-radius: var(--rws-radius);
-      background: #fff;
-      color: var(--rws-text-muted);
-      cursor: pointer;
-      transition: border-color 150ms ease, color 150ms ease;
+    }
 
-      &:hover:not(:disabled) {
-        border-color: var(--rws-accent);
-        color: var(--rws-accent-strong);
+    .icon-xs {
+      width: 14px;
+      height: 14px;
+    }
+
+    .section-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .col-wide { min-width: 0; }
+    .col-narrow { min-width: 0; }
+
+    .dual-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    .dual-col { min-width: 0; }
+
+    @media (max-width: 1024px) {
+      .section-row,
+      .dual-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-header {
+        flex-direction: column;
+        align-items: flex-start;
       }
 
-      &:disabled { opacity: 0.35; cursor: not-allowed; }
-      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
-    }
-
-    .week-label {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--rws-text);
-      min-width: 180px;
-      text-align: center;
-    }
-
-    // ── Day groups ──────────────────────────────────────────────
-    .day-groups {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    .day-group {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
-      overflow: hidden;
-    }
-
-    .day-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.875rem 1.25rem;
-      background: var(--rws-bg);
-      border-bottom: 1px solid var(--rws-border);
-    }
-
-    .day-name {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--rws-text);
-    }
-
-    .day-total {
-      font-size: 0.875rem;
-      font-weight: 600;
-      font-family: var(--rws-font-mono);
-      color: var(--rws-accent-strong);
-    }
-
-    .session-rows { padding: 0; }
-
-    .session-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0.75rem 1.25rem;
-      border-bottom: 1px solid var(--rws-border);
-      transition: background 150ms ease;
-
-      &:last-child { border-bottom: none; }
-      &:hover { background: #fafbfc; }
-    }
-
-    .session-times {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-family: var(--rws-font-mono);
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--rws-text);
-    }
-
-    .session-arrow {
-      color: var(--rws-text-muted);
-      font-size: 0.75rem;
-    }
-
-    .session-out {
-      color: var(--rws-text-muted);
-    }
-
-    .session-details {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-    }
-
-    .session-break {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      font-size: 0.8125rem;
-      color: #92610a;
-    }
-
-    .session-worked {
-      font-family: var(--rws-font-mono);
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--rws-text);
-    }
-
-    // ── Week summary ────────────────────────────────────────────
-    .week-summary {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-
-    .week-summary-label {
-      font-size: 0.9375rem;
-      font-weight: 600;
-      color: var(--rws-text);
-    }
-
-    .week-summary-value {
-      font-size: 1.125rem;
-      font-weight: 700;
-      font-family: var(--rws-font-mono);
-      color: var(--rws-accent-strong);
-    }
-
-    // ── Empty ───────────────────────────────────────────────────
-    .empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 3rem 2rem;
-      text-align: center;
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-    }
-
-    .empty-icon { width: 40px; height: 40px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 0.75rem; }
-    .empty-text { margin: 0; font-size: 0.9375rem; font-weight: 500; color: var(--rws-text); }
-
-    @media (max-width: 639px) {
-      .today-stats { grid-template-columns: 1fr 1fr; }
-      .session-row { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+      .page-title { font-size: 1.375rem; }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        transition-duration: 0.01ms !important;
-      }
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
     }
   `],
 })
-export class EmployeeTimeComponent implements OnInit {
+export class EmployeeTimeComponent implements OnInit, OnDestroy {
   private readonly timeService = inject(TimeEntriesService);
+  private readonly alertsService = inject(AlertsService);
+  private readonly realtime = inject(RealtimeService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly todayData = signal<TodayDetailResponse | null>(null);
-  protected readonly todayLoading = signal(true);
-  protected readonly historySessions = signal<SessionWithWorked[]>([]);
-  protected readonly historyLoading = signal(true);
-  protected readonly weekOffset = signal(0);
+  readonly loading = signal(true);
 
-  protected readonly todayDateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'short', day: 'numeric', year: 'numeric',
+  readonly filterState = signal<FilterState>({
+    preset: 'this-week',
+    ...presetToRange('this-week'),
   });
 
-  protected readonly todayFirstIn = computed(() => {
-    const d = this.todayData();
-    if (!d || d.sessions.length === 0) return '--';
-    return this.formatTime(d.sessions[0].clockIn);
-  });
+  readonly currentStatus = signal<'clocked_out' | 'active' | 'break'>('clocked_out');
+  readonly agentOnline = signal(false);
+  readonly dailyStats = signal<DailyStats | null>(null);
+  readonly weeklyStats = signal<WeeklyStats | null>(null);
+  readonly monthlyStats = signal<MonthlyStats | null>(null);
+  readonly policy = signal<CompanyWorkPolicy | null>(null);
+  readonly attendanceEvaluation = signal('');
 
-  protected readonly todayLastOut = computed(() => {
-    const d = this.todayData();
-    if (!d || d.sessions.length === 0) return '--';
-    const last = d.sessions[d.sessions.length - 1];
-    return last.clockOut ? this.formatTime(last.clockOut) : 'now';
-  });
+  readonly rangeSessions = signal<SessionWithWorked[]>([]);
+  readonly todaySessions = signal<SessionWithWorked[]>([]);
+  readonly sessionAlerts = signal<Map<number, boolean>>(new Map());
 
-  protected readonly todayBreakLabel = computed(() => {
-    const d = this.todayData();
-    if (!d || d.totalBreakMinutes === 0) return '0m';
-    const h = Math.floor(d.totalBreakMinutes / 60);
-    const m = d.totalBreakMinutes % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
-  });
-
-  protected readonly todayWorkedLabel = computed(() => {
-    const d = this.todayData();
-    if (!d) return '0h 0m';
-    return this.formatMinutes(d.totalWorkedMinutes);
-  });
-
-  protected readonly weekLabel = computed(() => {
-    const start = this.weekStart();
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    return `${fmt(start)} – ${fmt(end)}, ${end.getFullYear()}`;
-  });
-
-  protected readonly dayGroups = computed(() => {
-    const sessions = this.historySessions();
-    const map = new Map<string, DayGroup>();
-
+  readonly weekDays = computed<DayDetail[]>(() => {
+    const filter = this.filterState();
+    const start = new Date(filter.start);
+    start.setHours(0, 0, 0, 0);
+    const days: DayDetail[] = [];
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const fullDayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    for (const s of sessions) {
-      const d = new Date(s.clockIn);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      if (!map.has(key)) {
-        const dayName = dayNames[d.getDay()];
-        const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        map.set(key, { label: `${dayName} – ${dateLabel}`, date: key, sessions: [], totalMinutes: 0 });
-      }
-      const group = map.get(key)!;
-      group.sessions.push(s);
-      group.totalMinutes += s.workedMinutes;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      const dateStr = fmt(d);
+      const daySessions = this.rangeSessions().filter(s => s.clockIn.slice(0, 10) === dateStr);
+      const totalWorked = daySessions.reduce((sum, s) => sum + s.workedMinutes, 0);
+      const totalBreak = daySessions.reduce((sum, s) => sum + (s.totalBreakMinutes || 0), 0);
+      const expected = 8 * 60;
+      const overtime = Math.max(0, totalWorked - expected);
+      const missing = Math.max(0, expected - totalWorked);
+
+      let attendanceStatus: DailyStats['attendanceStatus'] = 'absent';
+      if (totalWorked >= expected) attendanceStatus = overtime > 0 ? 'overtime' : 'completed';
+      else if (totalWorked > 0) attendanceStatus = 'underworked';
+      else if (d.getDay() === 0 || d.getDay() === 6) attendanceStatus = 'day_off';
+
+      days.push({
+        date: dateStr,
+        label: `${fullDayNames[d.getDay()]}, ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+        dayShort: dayNames[d.getDay()],
+        sessions: daySessions,
+        totalWorkedMinutes: totalWorked,
+        totalBreakMinutes: totalBreak,
+        expectedMinutes: expected,
+        overtimeMinutes: overtime,
+        missingMinutes: missing,
+        attendanceStatus,
+      });
     }
-
-    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+    return days;
   });
 
-  protected readonly weekTotalMinutes = computed(() => {
-    return this.dayGroups().reduce((sum, g) => sum + g.totalMinutes, 0);
+  readonly dailyHistory = computed(() => {
+    const sessions = this.rangeSessions();
+    const byDate = new Map<string, { workedMinutes: number; breakMinutes: number }>();
+    for (const s of sessions) {
+      const date = s.clockIn.slice(0, 10);
+      const existing = byDate.get(date) || { workedMinutes: 0, breakMinutes: 0 };
+      existing.workedMinutes += s.workedMinutes;
+      existing.breakMinutes += s.totalBreakMinutes || 0;
+      byDate.set(date, existing);
+    }
+    return Array.from(byDate.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-14)
+      .map(([date, data]) => ({ date, ...data }));
   });
-
-  protected readonly isCurrentWeek = computed(() => this.weekOffset() >= 0);
 
   ngOnInit(): void {
-    this.loadToday();
-    this.loadHistory();
+    this.loadPolicy();
+    this.loadAllData();
+    this.subscribeToRealtime();
   }
 
-  prevWeek(): void {
-    this.weekOffset.update(v => v - 1);
-    this.loadHistory();
+  ngOnDestroy(): void {}
+
+  onPresetChange(preset: string): void {
+    const range = presetToRange(preset as FilterPreset);
+    this.filterState.set({ preset: preset as FilterPreset, ...range });
+    this.loadRangeData();
   }
 
-  nextWeek(): void {
-    if (this.weekOffset() >= 0) return;
-    this.weekOffset.update(v => v + 1);
-    this.loadHistory();
+  onExportCsv(): void {
+    const sessions = this.rangeSessions();
+    if (!sessions.length) return;
+
+    const headers = ['Date', 'Clock In', 'Clock Out', 'Worked (min)', 'Break (min)', 'Status'];
+    const rows = sessions.map(s => [
+      s.clockIn.slice(0, 10),
+      new Date(s.clockIn).toLocaleTimeString(),
+      s.clockOut ? new Date(s.clockOut).toLocaleTimeString() : '',
+      s.workedMinutes.toString(),
+      (s.totalBreakMinutes || 0).toString(),
+      s.status,
+    ]);
+
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `my-time-${this.filterState().start}-to-${this.filterState().end}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  private loadToday(): void {
-    this.todayLoading.set(true);
+  private loadPolicy(): void {
+    this.timeService.getPolicy().subscribe({
+      next: (res) => this.policy.set(res.policy),
+      error: () => {},
+    });
+  }
+
+  private loadAllData(): void {
+    this.loading.set(true);
+
+    this.timeService.getStatus().subscribe({
+      next: (res) => {
+        this.currentStatus.set(res.status);
+        this.agentOnline.set(res.agentOnline);
+        if (res.dailyStats) this.dailyStats.set(res.dailyStats);
+        if (res.weeklyStats) this.weeklyStats.set(res.weeklyStats);
+      },
+      error: () => {},
+    });
+
+    this.timeService.getMonthlyStats(new Date().getFullYear(), new Date().getMonth() + 1).subscribe({
+      next: (res) => this.monthlyStats.set(res.stats),
+      error: () => {},
+    });
+
+    this.timeService.getEmployeeStats().subscribe({
+      next: (res) => {
+        this.attendanceEvaluation.set(res.attendanceEvaluation);
+        if (res.dailyStats) this.dailyStats.set(res.dailyStats);
+        if (res.weeklyStats) this.weeklyStats.set(res.weeklyStats);
+        if (res.monthlyStats) this.monthlyStats.set(res.monthlyStats);
+      },
+      error: () => {},
+    });
+
+    const filter = this.filterState();
+    this.timeService.getRangeSessions(filter.start, filter.end).subscribe({
+      next: (res) => {
+        this.rangeSessions.set(res.sessions);
+        this.loading.set(false);
+      },
+      error: () => this.loading.set(false),
+    });
+
     this.timeService.getTodayDetail().subscribe({
+      next: (res) => this.todaySessions.set(res.sessions),
+      error: () => {},
+    });
+
+    this.loadSessionAlerts();
+  }
+
+  private loadRangeData(): void {
+    this.loading.set(true);
+    const filter = this.filterState();
+
+    this.timeService.getRangeSessions(filter.start, filter.end).subscribe({
       next: (res) => {
-        this.todayData.set(res);
-        this.todayLoading.set(false);
+        this.rangeSessions.set(res.sessions);
+        this.loading.set(false);
       },
-      error: () => this.todayLoading.set(false),
+      error: () => this.loading.set(false),
+    });
+
+    this.timeService.getTodayDetail().subscribe({
+      next: (res) => this.todaySessions.set(res.sessions),
+      error: () => {},
+    });
+
+    this.loadSessionAlerts();
+  }
+
+  private loadSessionAlerts(): void {
+    this.alertsService.getMyAlerts(100).subscribe({
+      next: (res) => {
+        const map = new Map<number, boolean>();
+        for (const alert of res.alerts) {
+          if (alert.session?.id) {
+            map.set(alert.session.id, true);
+          }
+        }
+        this.sessionAlerts.set(map);
+      },
+      error: () => {},
     });
   }
 
-  private loadHistory(): void {
-    this.historyLoading.set(true);
-    const start = this.weekStart();
-    const str = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
-    this.timeService.getHistory(str).subscribe({
-      next: (res) => {
-        this.historySessions.set(res.sessions);
-        this.historyLoading.set(false);
-      },
-      error: () => this.historyLoading.set(false),
+  private subscribeToRealtime(): void {
+    this.realtime.sessionUpdated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: SessionUpdatedEvent) => {
+      this.currentStatus.set(event.status);
+      this.agentOnline.set(event.agentOnline);
+      if (event.dailyStats) this.dailyStats.set(event.dailyStats);
+      if (event.weeklyStats) this.weeklyStats.set(event.weeklyStats);
+
+      this.timeService.getTodayDetail().subscribe({
+        next: (res) => this.todaySessions.set(res.sessions),
+        error: () => {},
+      });
+
+      this.timeService.getRangeSessions(this.filterState().start, this.filterState().end).subscribe({
+        next: (res) => this.rangeSessions.set(res.sessions),
+        error: () => {},
+      });
+
+      this.loadSessionAlerts();
     });
-  }
-
-  private weekStart(): Date {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - ((dayOfWeek + 6) % 7) + (this.weekOffset() * 7));
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  }
-
-  protected formatTime(iso: string): string {
-    const d = new Date(iso);
-    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-  }
-
-  protected formatMinutes(min: number): string {
-    const h = Math.floor(min / 60);
-    const m = min % 60;
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   }
 }

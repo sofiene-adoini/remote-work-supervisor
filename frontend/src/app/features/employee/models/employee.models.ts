@@ -1,3 +1,11 @@
+export interface Break {
+  id: number;
+  start: string;
+  end: string | null;
+  duration: number;
+  isAuto: boolean;
+}
+
 export interface Session {
   id: number;
   clockIn: string;
@@ -7,6 +15,40 @@ export interface Session {
   status: 'active' | 'break' | 'completed';
   totalBreakMinutes: number;
   user?: { id: number; fullName: string };
+}
+
+export interface DailyStats {
+  workedMinutes: number;
+  productiveMinutes: number;
+  idleMinutes: number;
+  breakMinutes: number;
+  overtimeMinutes: number;
+  expectedMinutes: number;
+  missingMinutes: number;
+  extraMinutes: number;
+  attendanceStatus: 'completed' | 'underworked' | 'overtime' | 'absent' | 'day_off';
+}
+
+export interface WeeklyStats {
+  expectedHours: number;
+  workedHours: number;
+  overtimeHours: number;
+  missingHours: number;
+  productiveHours: number;
+  idleHours: number;
+  breakHours: number;
+  attendanceRate: number;
+  completionRate: number;
+}
+
+export interface MonthlyStats {
+  expectedHours: number;
+  workedHours: number;
+  overtimeHours: number;
+  missingHours: number;
+  averageDailyHours: number;
+  attendancePercentage: number;
+  productivePercentage: number;
 }
 
 export interface SessionResponse {
@@ -20,6 +62,8 @@ export interface SessionResponse {
   weeklyMinutes: number;
   currentProject: { id: number; name: string } | null;
   agentOnline: boolean;
+  dailyStats: DailyStats;
+  weeklyStats: WeeklyStats;
 }
 
 export interface WeeklyHoursResponse {
@@ -79,6 +123,7 @@ export interface HrStats {
 
 export interface SessionWithWorked extends Session {
   workedMinutes: number;
+  breaks?: Break[];
 }
 
 export interface SessionHistoryResponse {
@@ -101,4 +146,86 @@ export interface TeamMember {
   hoursToday: number;
   hoursThisWeek: number;
   lastActivity?: string;
+}
+
+export interface CompanyWorkPolicy {
+  id?: number;
+  expectedDailyHours: number;
+  expectedWeeklyHours: number;
+  maximumDailyHours: number;
+  maximumWeeklyHours: number;
+  minimumBreakMinutes: number;
+  autoOvertimeEnabled: boolean;
+  overtimeStartsAfterDailyHours: number;
+  allowClockInOutsideSchedule: boolean;
+  allowWeekendWork: boolean;
+  workingDays: string[];
+  lateToleranceMinutes: number;
+  earlyLeaveToleranceMinutes: number;
+  maximumContinuousWorkHours: number;
+  timezone: string;
+}
+
+export interface EmployeeWorkStats {
+  userId: number;
+  fullName: string;
+  email: string;
+  dailyStats: DailyStats;
+  weeklyStats: WeeklyStats;
+  monthlyStats: MonthlyStats;
+  attendanceEvaluation: string;
+  currentSession: {
+    status: string;
+    clockIn: string;
+    durationMinutes: number;
+  } | null;
+}
+
+export interface RangeSessionsResponse {
+  sessions: SessionWithWorked[];
+}
+
+export interface TimelineEvent {
+  time: string;
+  type: 'clock_in' | 'clock_out' | 'break_start' | 'break_end' | 'auto_break' | 'idle' | 'warning';
+  label: string;
+  detail?: string;
+}
+
+export interface DayDetail {
+  date: string;
+  label: string;
+  dayShort: string;
+  sessions: SessionWithWorked[];
+  totalWorkedMinutes: number;
+  totalBreakMinutes: number;
+  expectedMinutes: number;
+  overtimeMinutes: number;
+  missingMinutes: number;
+  attendanceStatus: DailyStats['attendanceStatus'];
+}
+
+export interface PolicyResponse {
+  policy: CompanyWorkPolicy;
+}
+
+export interface EmployeeStatsResponse {
+  dailyStats: DailyStats;
+  weeklyStats: WeeklyStats;
+  monthlyStats: MonthlyStats;
+  attendanceEvaluation: string;
+  currentSession: {
+    status: string;
+    clockIn: string;
+    durationMinutes: number;
+  } | null;
+}
+
+export type FilterPreset = 'today' | 'yesterday' | 'last-7-days' | 'last-14-days' | 'last-30-days' | 'this-week' | 'previous-week' | 'this-month' | 'previous-month' | 'custom';
+
+export interface FilterState {
+  preset: FilterPreset;
+  start: string;
+  end: string;
+  label: string;
 }

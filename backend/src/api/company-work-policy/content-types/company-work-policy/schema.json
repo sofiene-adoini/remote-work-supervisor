@@ -1,0 +1,28 @@
+{
+  "kind": "singleType",
+  "collectionName": "company_work_policies",
+  "info": {
+    "singularName": "company-work-policy",
+    "pluralName": "company-work-policies",
+    "displayName": "Company Work Policy"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "expectedDailyHours": { "type": "integer", "default": 8, "min": 1, "max": 24 },
+    "expectedWeeklyHours": { "type": "integer", "default": 40, "min": 1, "max": 168 },
+    "maximumDailyHours": { "type": "integer", "default": 12, "min": 1, "max": 24 },
+    "maximumWeeklyHours": { "type": "integer", "default": 60, "min": 1, "max": 168 },
+    "minimumBreakMinutes": { "type": "integer", "default": 30, "min": 0, "max": 480 },
+    "autoOvertimeEnabled": { "type": "boolean", "default": true },
+    "overtimeStartsAfterDailyHours": { "type": "integer", "default": 8, "min": 1, "max": 24 },
+    "allowClockInOutsideSchedule": { "type": "boolean", "default": true },
+    "allowWeekendWork": { "type": "boolean", "default": false },
+    "workingDays": { "type": "json", "default": ["Monday","Tuesday","Wednesday","Thursday","Friday"] },
+    "lateToleranceMinutes": { "type": "integer", "default": 5, "min": 0, "max": 120 },
+    "earlyLeaveToleranceMinutes": { "type": "integer", "default": 5, "min": 0, "max": 120 },
+    "maximumContinuousWorkHours": { "type": "integer", "default": 6, "min": 1, "max": 24 },
+    "timezone": { "type": "string", "default": "Africa/Tunis" }
+  }
+}
