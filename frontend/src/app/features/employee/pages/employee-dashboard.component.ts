@@ -4,14 +4,15 @@ import { DatePipe, DecimalPipe, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight,
-  LucideClock, LucideAlertTriangle, LucideCheckCircle,
+  LucideClock, LucideAlertTriangle, LucideCheckCircle, LucideSend,
 } from '@lucide/angular';
 import { TodaysStatusComponent } from '../components/todays-status.component';
 import { TimeEntriesService } from '../services/time-entries.service';
 import { AlertsService } from '../services/alerts.service';
+import { OvertimeService } from '../services/overtime.service';
 import { ProjectsService } from '../services/projects.service';
-import { Alert, DailyStats, WeeklyStats } from '../models/employee.models';
-import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../../core/services/realtime.service';
+import { Alert, DailyStats, WeeklyStats, OvertimeDeclaration } from '../models/employee.models';
+import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetectedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-dashboard',
@@ -189,6 +190,51 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
         </div>
       </div>
 
+      <!-- Today's Overtime -->
+      @if (detectedOvertime()) {
+        <div class="card grid-full overtime-card">
+          <div class="card-header">
+            <h2 class="card-title">Today's Overtime</h2>
+            <span class="ot-badge" [class]="'ot-' + detectedOvertime()!.status">
+              {{ overtimeStatusLabel(detectedOvertime()!.status) }}
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="ot-stats-row">
+              <div class="ot-stat">
+                <span class="ot-stat-label">Worked</span>
+                <span class="ot-stat-value">{{ (detectedOvertime()!.workedMinutes / 60) | number:'1.1-1' }}h</span>
+              </div>
+              <div class="ot-stat">
+                <span class="ot-stat-label">Expected</span>
+                <span class="ot-stat-value">{{ (detectedOvertime()!.expectedMinutes / 60) | number:'1.1-1' }}h</span>
+              </div>
+              <div class="ot-stat">
+                <span class="ot-stat-label">Detected OT</span>
+                <span class="ot-stat-value accent">{{ (detectedOvertime()!.overtimeMinutes / 60) | number:'1.1-1' }}h</span>
+              </div>
+            </div>
+            @if (detectedOvertime()!.status === 'detected') {
+              <div class="ot-action-row">
+                <a class="btn btn-primary btn-sm" routerLink="/employee/overtime">
+                  <svg lucideSend class="icon-xs"></svg>
+                  Complete Overtime Declaration
+                </a>
+              </div>
+            }
+            @if (detectedOvertime()!.status === 'submitted') {
+              <p class="ot-pending-note">Awaiting HR review</p>
+            }
+            @if (detectedOvertime()!.status === 'approved') {
+              <p class="ot-approved-note">Approved by {{ detectedOvertime()!.reviewer?.fullName || 'HR' }}</p>
+            }
+            @if (detectedOvertime()!.status === 'rejected') {
+              <p class="ot-rejected-note">Rejected</p>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Quick Actions Row -->
       <div class="card grid-full actions-row">
         <h2 class="card-title">Quick Actions</h2>
@@ -206,7 +252,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
           <a class="action-card" routerLink="/employee/overtime">
             <svg lucideChartBar class="action-icon" aria-hidden="true"></svg>
             <span class="action-label">Overtime</span>
-            <span class="action-sub">Declare hours</span>
+            <span class="action-sub">{{ detectedOvertime() ? 'View details' : 'Manage' }}</span>
             <svg lucideArrowRight class="action-arrow" aria-hidden="true"></svg>
           </a>
         </div>
@@ -475,6 +521,72 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
       color: var(--rws-text-muted);
     }
 
+    /* ── Overtime Card ─────────────────────────────────────────── */
+    .overtime-card { border-left: 3px solid #d9973b; }
+
+    .ot-badge {
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+
+      &.ot-detected { background: #fef3e2; color: #92610a; }
+      &.ot-submitted { background: #e8f1fb; color: #2b3a67; }
+      &.ot-approved { background: #e8f8f6; color: #167d72; }
+      &.ot-rejected { background: #fde8e8; color: #b91c1c; }
+      &.ot-cancelled { background: #f3f4f6; color: #6b7280; }
+    }
+
+    .ot-stats-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .ot-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .ot-stat-label {
+      font-size: 0.75rem;
+      color: var(--rws-text-muted);
+      font-weight: 500;
+    }
+
+    .ot-stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--rws-text);
+      font-family: var(--rws-font-mono);
+
+      &.accent { color: #d9973b; }
+    }
+
+    .ot-action-row { margin-bottom: 0.5rem; }
+
+    .ot-pending-note {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #2b3a67;
+      font-weight: 500;
+    }
+
+    .ot-approved-note {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #167d72;
+      font-weight: 500;
+    }
+
+    .ot-rejected-note {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: #d64545;
+      font-weight: 500;
+    }
+
     /* ── Quick actions ────────────────────────────────────────── */
     .actions-row {
       display: flex;
@@ -542,6 +654,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent } from '../../.
 export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   private readonly timeService = inject(TimeEntriesService);
   private readonly alertsService = inject(AlertsService);
+  private readonly overtimeService = inject(OvertimeService);
   private readonly projectsService = inject(ProjectsService);
   private readonly realtime = inject(RealtimeService);
   private readonly destroyRef = inject(DestroyRef);
@@ -564,6 +677,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   protected readonly weeklyLoading = signal(true);
   protected readonly recentAlerts = signal<Alert[]>([]);
   protected readonly alertsLoading = signal(true);
+  protected readonly detectedOvertime = signal<OvertimeDeclaration | null>(null);
   protected readonly projectCount = signal(0);
   protected readonly projectsLoading = signal(true);
 
@@ -594,6 +708,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     this.loadInitialStatus();
     this.loadWeeklyHours();
     this.loadRecentAlerts();
+    this.loadTodayOvertime();
     this.loadProjectCount();
     this.subscribeToRealtime();
   }
@@ -638,6 +753,14 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
       };
 
       this.recentAlerts.update((list) => [newAlert, ...list].slice(0, 5));
+    });
+
+    this.realtime.overtimeDetected$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: OvertimeDetectedEvent) => {
+      this.loadTodayOvertime();
+    });
+
+    this.realtime.overtimeChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadTodayOvertime();
     });
   }
 
@@ -685,6 +808,16 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadTodayOvertime(): void {
+    this.overtimeService.getMyDeclarations().subscribe({
+      next: (res) => {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayOt = res.declarations.find((d) => d.date === today && d.status !== 'cancelled');
+        this.detectedOvertime.set(todayOt || null);
+      },
+    });
+  }
+
   private loadProjectCount(): void {
     this.projectsLoading.set(true);
     this.projectsService.getMyProjects().subscribe({
@@ -694,5 +827,16 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
       },
       error: () => this.projectsLoading.set(false),
     });
+  }
+
+  protected overtimeStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      detected: 'Pending',
+      submitted: 'Pending Review',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      cancelled: 'Cancelled',
+    };
+    return labels[status] || status;
   }
 }

@@ -185,6 +185,9 @@ export default {
             minimumBreakMinutes: 30,
             autoOvertimeEnabled: true,
             overtimeStartsAfterDailyHours: 8,
+            minimumOvertimeThresholdMinutes: 15,
+            requireHrApproval: true,
+            requireJustification: true,
             allowClockInOutsideSchedule: true,
             allowWeekendWork: false,
             workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
@@ -257,11 +260,32 @@ export default {
       }
     };
 
+    const otCustomActions = [
+      'api::overtime-declaration.overtime-declaration.myDeclarations',
+      'api::overtime-declaration.overtime-declaration.submitJustification',
+      'api::overtime-declaration.overtime-declaration.cancel',
+    ];
+
+    const otHrActions = [
+      'api::overtime-declaration.overtime-declaration.pending',
+      'api::overtime-declaration.overtime-declaration.allDeclarations',
+      'api::overtime-declaration.overtime-declaration.approve',
+      'api::overtime-declaration.overtime-declaration.reject',
+    ];
+
     for (const role of ensuredRoles) {
       await ensurePermission(role.id, 'plugin::users-permissions.auth.me');
 
+      for (const action of otCustomActions) {
+        await ensurePermission(role.id, action);
+      }
+
       if (role.name === 'HR' || role.name === 'Admin') {
         await ensurePermission(role.id, 'plugin::users-permissions.auth.invite');
+
+        for (const action of otHrActions) {
+          await ensurePermission(role.id, action);
+        }
       }
     }
   },

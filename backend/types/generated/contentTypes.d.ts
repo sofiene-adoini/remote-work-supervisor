@@ -719,6 +719,15 @@ export interface ApiCompanyWorkPolicyCompanyWorkPolicy
         number
       > &
       Schema.Attribute.DefaultTo<30>;
+    minimumOvertimeThresholdMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          max: 240;
+          min: 0;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<15>;
     overtimeStartsAfterDailyHours: Schema.Attribute.Integer &
       Schema.Attribute.SetMinMax<
         {
@@ -729,6 +738,10 @@ export interface ApiCompanyWorkPolicyCompanyWorkPolicy
       > &
       Schema.Attribute.DefaultTo<8>;
     publishedAt: Schema.Attribute.DateTime;
+    requireHrApproval: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
+    requireJustification: Schema.Attribute.Boolean &
+      Schema.Attribute.DefaultTo<true>;
     timezone: Schema.Attribute.String &
       Schema.Attribute.DefaultTo<'Africa/Tunis'>;
     updatedAt: Schema.Attribute.DateTime;
@@ -757,26 +770,43 @@ export interface ApiOvertimeDeclarationOvertimeDeclaration
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     date: Schema.Attribute.Date & Schema.Attribute.Required;
-    hours: Schema.Attribute.Decimal &
+    expectedMinutes: Schema.Attribute.Integer &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMax<
         {
-          max: 24;
-          min: 0.25;
+          min: 0;
         },
         number
       >;
+    justificationSubmittedAt: Schema.Attribute.DateTime;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
       'api::overtime-declaration.overtime-declaration'
     > &
       Schema.Attribute.Private;
-    publishedAt: Schema.Attribute.DateTime;
-    reason: Schema.Attribute.Text & Schema.Attribute.Required;
-    status: Schema.Attribute.Enumeration<['pending', 'approved', 'rejected']> &
+    notes: Schema.Attribute.Text;
+    overtimeMinutes: Schema.Attribute.Integer &
       Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<'pending'>;
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      >;
+    publishedAt: Schema.Attribute.DateTime;
+    reason: Schema.Attribute.Text;
+    reviewedAt: Schema.Attribute.DateTime;
+    reviewer: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
+    status: Schema.Attribute.Enumeration<
+      ['detected', 'submitted', 'pending', 'approved', 'rejected', 'cancelled']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'detected'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -784,6 +814,14 @@ export interface ApiOvertimeDeclarationOvertimeDeclaration
       'manyToOne',
       'plugin::users-permissions.user'
     >;
+    workedMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 0;
+        },
+        number
+      >;
   };
 }
 

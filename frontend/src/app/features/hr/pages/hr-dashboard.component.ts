@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal, DestroyRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
@@ -13,12 +13,12 @@ import { HrOvertimeService } from '../services/hr-overtime.service';
 import { HrAlertsService } from '../services/hr-alerts.service';
 import { HrSettingsService } from '../services/hr-settings.service';
 import { HrDashboardStats, HrTeamMember, HrOvertimeDeclaration, HrAlert, HrEmployeeStats } from '../models/hr.models';
-import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../../core/services/realtime.service';
+import { RealtimeService, SessionStatusEvent, AlertCreatedEvent, OvertimeDetectedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-hr-dashboard',
   imports: [
-    RouterLink, DecimalPipe,
+    RouterLink, DatePipe, DecimalPipe,
     LucideUsers, LucideClock, LucideCoffee, LucideTriangleAlert,
     LucideTimer, LucideCalendarClock, LucideBell, LucideArrowRight,
     LucideCheck, LucideXCircle,
@@ -173,7 +173,7 @@ import { RealtimeService, SessionStatusEvent, AlertCreatedEvent } from '../../..
                 <div class="ot-row">
                   <div class="ot-info">
                     <span class="ot-name">{{ ot.user?.fullName }}</span>
-                    <span class="ot-detail">{{ ot.hours }}h — {{ ot.date }}</span>
+                    <span class="ot-detail">{{ (ot.overtimeMinutes / 60) | number:'1.1-1' }}h OT — {{ ot.date | date:'mediumDate' }}</span>
                   </div>
                   <div class="ot-actions">
                     <button class="btn-icon btn-approve" (click)="handleApprove(ot.id)" title="Approve">
@@ -720,10 +720,16 @@ export class HrDashboardComponent implements OnInit {
     });
 
     this.realtime.overtimeChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event) => {
-      if (event.status !== 'pending') {
-        this.pendingOvertime.update((list) => list.filter((d) => d.id !== event.declarationId));
+      if (event.status !== 'submitted') {
+        this.pendingOvertime.update((list) => list.filter((d) => d.id !== event.overtimeId));
         this.refreshStatsFromApi();
       }
+      this.loadPendingOvertime();
+    });
+
+    this.realtime.overtimeDetected$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.loadPendingOvertime();
+      this.refreshStatsFromApi();
     });
 
     this.realtime.alertCreated$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AlertCreatedEvent) => {

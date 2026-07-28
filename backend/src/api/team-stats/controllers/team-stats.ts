@@ -53,7 +53,7 @@ export default {
     }
 
     const pendingOvertime = await strapi.db.query(OT_UID).count({
-      where: { status: 'pending' },
+      where: { status: 'submitted' },
     });
 
     const unreadAlerts = await strapi.db.query(ALERT_UID).count({

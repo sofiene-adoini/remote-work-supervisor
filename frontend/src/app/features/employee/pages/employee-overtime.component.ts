@@ -1,21 +1,17 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { DatePipe, TitleCasePipe } from '@angular/common';
-import { LucidePlus, LucideX, LucideClock, LucideCheck, LucideXCircle } from '@lucide/angular';
+import { DatePipe, DecimalPipe } from '@angular/common';
+import { LucideClock, LucideCheck, LucideXCircle, LucideAlertTriangle, LucideSend } from '@lucide/angular';
 import { OvertimeService } from '../services/overtime.service';
 import { OvertimeDeclaration } from '../models/employee.models';
 
 @Component({
   selector: 'app-employee-overtime',
-  imports: [FormsModule, DatePipe, TitleCasePipe, LucidePlus, LucideX, LucideClock, LucideCheck, LucideXCircle],
+  imports: [FormsModule, DatePipe, DecimalPipe, LucideClock, LucideCheck, LucideXCircle, LucideAlertTriangle, LucideSend],
   template: `
     <div class="page-container">
       <div class="page-header">
         <h1 class="page-title">Overtime</h1>
-        <button class="btn btn-primary" type="button" (click)="openDeclareDialog()">
-          <svg lucidePlus class="icon-sm" aria-hidden="true"></svg>
-          Declare Overtime
-        </button>
       </div>
 
       @if (loading()) {
@@ -27,8 +23,8 @@ import { OvertimeDeclaration } from '../models/employee.models';
       } @else if (declarations().length === 0) {
         <div class="empty-state">
           <svg lucideClock class="empty-icon" aria-hidden="true"></svg>
-          <p class="empty-text">No overtime declared</p>
-          <p class="empty-sub">Click "Declare Overtime" to submit your first entry.</p>
+          <p class="empty-text">No overtime recorded</p>
+          <p class="empty-sub">Overtime is automatically detected when you work more than your expected hours.</p>
         </div>
       } @else {
         <div class="table-wrapper">
@@ -36,28 +32,48 @@ import { OvertimeDeclaration } from '../models/employee.models';
             <thead>
               <tr>
                 <th>Date</th>
-                <th class="th-hours">Hours</th>
+                <th class="th-hours">Worked</th>
+                <th class="th-hours">Expected</th>
+                <th class="th-hours">Overtime</th>
                 <th>Reason</th>
                 <th class="th-status">Status</th>
+                <th class="th-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               @for (d of declarations(); track d.id) {
                 <tr>
                   <td class="td-date">{{ d.date | date:'mediumDate' }}</td>
-                  <td class="td-hours">{{ d.hours }}h</td>
-                  <td class="td-reason">{{ d.reason }}</td>
+                  <td class="td-hours">{{ (d.workedMinutes / 60) | number:'1.1-1' }}h</td>
+                  <td class="td-hours">{{ (d.expectedMinutes / 60) | number:'1.1-1' }}h</td>
+                  <td class="td-hours td-ot">{{ (d.overtimeMinutes / 60) | number:'1.1-1' }}h</td>
+                  <td class="td-reason">{{ d.reason || '—' }}</td>
                   <td class="td-status">
                     <span class="status-badge" [class]="'status-' + d.status">
-                      @if (d.status === 'approved') {
-                        <svg lucideCheck class="icon-xs" aria-hidden="true"></svg>
-                      } @else if (d.status === 'rejected') {
-                        <svg lucideXCircle class="icon-xs" aria-hidden="true"></svg>
-                      } @else {
-                        <svg lucideClock class="icon-xs" aria-hidden="true"></svg>
+                      @switch (d.status) {
+                        @case ('detected') { <svg lucideAlertTriangle class="icon-xs"></svg> Pending }
+                        @case ('submitted') { <svg lucideClock class="icon-xs"></svg> Pending Review }
+                        @case ('approved') { <svg lucideCheck class="icon-xs"></svg> Approved }
+                        @case ('rejected') { <svg lucideXCircle class="icon-xs"></svg> Rejected }
+                        @case ('cancelled') { <svg lucideXCircle class="icon-xs"></svg> Cancelled }
                       }
-                      {{ d.status | titlecase }}
                     </span>
+                  </td>
+                  <td class="td-actions">
+                    @if (d.status === 'detected') {
+                      <button class="btn btn-primary btn-sm" type="button" (click)="openSubmitDialog(d)">
+                        <svg lucideSend class="icon-xs"></svg>
+                        Submit
+                      </button>
+                      <button class="btn btn-ghost btn-sm" type="button" (click)="handleCancel(d.id)">
+                        Cancel
+                      </button>
+                    }
+                    @if (d.status === 'submitted') {
+                      <button class="btn btn-ghost btn-sm" type="button" (click)="handleCancel(d.id)">
+                        Cancel
+                      </button>
+                    }
                   </td>
                 </tr>
               }
@@ -66,36 +82,55 @@ import { OvertimeDeclaration } from '../models/employee.models';
         </div>
       }
 
-      @if (declareDialogOpen()) {
-        <div class="dialog-overlay" (click)="closeDeclareDialog()"></div>
-        <div class="dialog" role="dialog" aria-modal="true" aria-label="Declare Overtime">
+      @if (submitDialogOpen()) {
+        <div class="dialog-overlay" (click)="closeSubmitDialog()"></div>
+        <div class="dialog" role="dialog" aria-modal="true" aria-label="Submit Overtime Justification">
           <div class="dialog-header">
-            <h2 class="dialog-title">Declare Overtime</h2>
-            <button class="dialog-close" type="button" (click)="closeDeclareDialog()" aria-label="Close">
-              <svg lucideX class="icon-sm" aria-hidden="true"></svg>
+            <h2 class="dialog-title">Overtime Justification</h2>
+            <button class="dialog-close" type="button" (click)="closeSubmitDialog()" aria-label="Close">
+              <svg lucideXCircle class="icon-sm"></svg>
             </button>
           </div>
           <div class="dialog-body">
-            <div class="form-group">
-              <label class="form-label" for="ot-date">Date</label>
-              <input class="form-input" id="ot-date" type="date" [(ngModel)]="declareDate" [max]="todayStr">
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="ot-hours">Hours</label>
-              <input class="form-input" id="ot-hours" type="number" [(ngModel)]="declareHours" min="0.25" max="24" step="0.25">
+            <div class="readonly-stats">
+              <div class="stat-item">
+                <span class="stat-label">Worked</span>
+                <span class="stat-value">{{ (selectedOt()?.workedMinutes ?? 0) / 60 | number:'1.1-1' }}h</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Expected</span>
+                <span class="stat-value">{{ (selectedOt()?.expectedMinutes ?? 0) / 60 | number:'1.1-1' }}h</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Overtime</span>
+                <span class="stat-value ot">{{ (selectedOt()?.overtimeMinutes ?? 0) / 60 | number:'1.1-1' }}h</span>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label" for="ot-reason">Reason</label>
-              <textarea class="form-input form-textarea" id="ot-reason" [(ngModel)]="declareReason" rows="3" placeholder="Why did you work overtime?"></textarea>
+              <select class="form-input" id="ot-reason" [(ngModel)]="submitReason">
+                <option value="">Select a reason...</option>
+                <option value="project_deadline">Project Deadline</option>
+                <option value="urgent_task">Urgent Task</option>
+                <option value="client_request">Client Request</option>
+                <option value="system_maintenance">System Maintenance</option>
+                <option value="team_collaboration">Team Collaboration</option>
+                <option value="meeting_overtime">Meeting Overtime</option>
+                <option value="other">Other</option>
+              </select>
             </div>
-            @if (declareError()) {
-              <p class="form-error">{{ declareError() }}</p>
+            <div class="form-group">
+              <label class="form-label" for="ot-notes">Additional Notes (optional)</label>
+              <textarea class="form-input form-textarea" id="ot-notes" [(ngModel)]="submitNotes" rows="3" placeholder="Optional details about this overtime..."></textarea>
+            </div>
+            @if (submitError()) {
+              <p class="form-error">{{ submitError() }}</p>
             }
           </div>
           <div class="dialog-footer">
-            <button class="btn btn-secondary" type="button" (click)="closeDeclareDialog()">Cancel</button>
-            <button class="btn btn-primary" type="button" (click)="submitDeclaration()" [disabled]="declareSubmitting()">
-              {{ declareSubmitting() ? 'Submitting...' : 'Submit' }}
+            <button class="btn btn-secondary" type="button" (click)="closeSubmitDialog()">Cancel</button>
+            <button class="btn btn-primary" type="button" (click)="submitJustification()" [disabled]="submitSubmitting() || !submitReason()">
+              {{ submitSubmitting() ? 'Submitting...' : 'Submit Justification' }}
             </button>
           </div>
         </div>
@@ -122,7 +157,7 @@ import { OvertimeDeclaration } from '../models/employee.models';
     }
 
     .icon-sm { width: 16px; height: 16px; }
-    .icon-xs { width: 12px; height: 12px; }
+    .icon-xs { width: 14px; height: 14px; }
 
     .empty-state {
       display: flex;
@@ -149,7 +184,7 @@ import { OvertimeDeclaration } from '../models/employee.models';
 
     .data-table { width: 100%; border-collapse: collapse; }
 
-    th, td { text-align: left; padding: 0.875rem 1.25rem; }
+    th, td { text-align: left; padding: 0.875rem 1rem; }
 
     thead tr { border-bottom: 1px solid var(--rws-border); background: var(--rws-bg); }
 
@@ -162,7 +197,8 @@ import { OvertimeDeclaration } from '../models/employee.models';
     }
 
     .th-date { width: 1%; white-space: nowrap; }
-    .th-hours, .th-status { text-align: right; width: 120px; }
+    .th-status, .th-actions { text-align: center; width: 120px; }
+    .th-hours { text-align: right; width: 100px; }
 
     tbody tr {
       border-bottom: 1px solid var(--rws-border);
@@ -170,10 +206,12 @@ import { OvertimeDeclaration } from '../models/employee.models';
       &:hover { background: #fafbfc; }
     }
 
-    .td-date { font-weight: 500; color: var(--rws-text); }
+    .td-date { font-weight: 500; color: var(--rws-text); white-space: nowrap; }
     .td-hours { text-align: right; font-family: var(--rws-font-mono); font-weight: 500; color: var(--rws-text); }
-    .td-reason { color: var(--rws-text); max-width: 600px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .td-status { text-align: right; }
+    .td-ot { color: #d9973b; font-weight: 600; }
+    .td-reason { color: var(--rws-text); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td-status { text-align: center; }
+    .td-actions { text-align: center; display: flex; gap: 0.375rem; justify-content: center; }
 
     .status-badge {
       display: inline-flex;
@@ -184,12 +222,36 @@ import { OvertimeDeclaration } from '../models/employee.models';
       font-size: 0.75rem;
       font-weight: 600;
 
-      &.status-pending { background: #fef3e2; color: #92610a; }
+      &.status-detected { background: #fef3e2; color: #92610a; }
+      &.status-submitted { background: #e8f1fb; color: #2b3a67; }
       &.status-approved { background: #e8f8f6; color: #167d72; }
       &.status-rejected { background: #fde8e8; color: #b91c1c; }
+      &.status-cancelled { background: #f3f4f6; color: #6b7280; }
     }
 
-    // ── Dialog ─────────────────────────────────────────────────
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      padding: 0.375rem 0.75rem;
+      border: none;
+      border-radius: var(--rws-radius);
+      font-size: 0.8125rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 150ms ease;
+      &:hover:not(:disabled) { opacity: 0.9; }
+      &:disabled { opacity: 0.5; cursor: not-allowed; }
+      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
+    }
+
+    .btn-sm { font-size: 0.75rem; padding: 0.25rem 0.5rem; }
+    .btn-primary { background: var(--rws-accent); color: var(--rws-primary); }
+    .btn-secondary { background: var(--rws-bg); color: var(--rws-text); border: 1px solid var(--rws-border); }
+    .btn-ghost { background: transparent; color: var(--rws-text-muted); border: 1px solid var(--rws-border); }
+
     .dialog-overlay {
       position: fixed;
       inset: 0;
@@ -203,7 +265,7 @@ import { OvertimeDeclaration } from '../models/employee.models';
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 440px;
+      width: 480px;
       max-width: calc(100vw - 2rem);
       max-height: calc(100vh - 4rem);
       background: #fff;
@@ -242,7 +304,38 @@ import { OvertimeDeclaration } from '../models/employee.models';
     .dialog-body { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; }
     .dialog-footer { display: flex; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--rws-border); }
 
-    // ── Form ───────────────────────────────────────────────────
+    .readonly-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: var(--rws-bg);
+      border-radius: var(--rws-radius);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.6875rem;
+      color: var(--rws-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-value {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--rws-text);
+      font-family: var(--rws-font-mono);
+
+      &.ot { color: #d9973b; }
+    }
+
     .form-group { display: flex; flex-direction: column; gap: 0.375rem; }
     .form-label { font-size: 0.8125rem; font-weight: 600; color: var(--rws-text); }
 
@@ -261,33 +354,11 @@ import { OvertimeDeclaration } from '../models/employee.models';
     .form-textarea { resize: vertical; min-height: 80px; }
     .form-error { margin: 0; font-size: 0.8125rem; color: var(--rws-error); }
 
-    // ── Buttons ────────────────────────────────────────────────
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.5rem 1rem;
-      border: none;
-      border-radius: var(--rws-radius);
-      font-size: 0.875rem;
-      font-weight: 600;
-      cursor: pointer;
-      font-family: inherit;
-      transition: opacity 150ms ease;
-      &:hover:not(:disabled) { opacity: 0.9; }
-      &:disabled { opacity: 0.5; cursor: not-allowed; }
-      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
-    }
-
-    .btn-primary { background: var(--rws-accent); color: var(--rws-primary); }
-    .btn-secondary { background: var(--rws-bg); color: var(--rws-text); border: 1px solid var(--rws-border); }
-
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
     @keyframes dialog-in { from { opacity: 0; transform: translate(-50%, -48%); } to { opacity: 1; transform: translate(-50%, -50%); } }
 
     @media (max-width: 639px) {
-      .th-reason { min-width: 180px; }
+      .td-reason { max-width: 120px; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -301,13 +372,12 @@ export class EmployeeOvertimeComponent implements OnInit {
   protected readonly declarations = signal<OvertimeDeclaration[]>([]);
   protected readonly loading = signal(true);
 
-  protected readonly declareDialogOpen = signal(false);
-  protected declareDate = '';
-  protected declareHours = 1;
-  protected declareReason = '';
-  protected readonly declareSubmitting = signal(false);
-  protected readonly declareError = signal('');
-  protected readonly todayStr = this._todayStr();
+  protected readonly submitDialogOpen = signal(false);
+  protected readonly selectedOt = signal<OvertimeDeclaration | null>(null);
+  protected readonly submitReason = signal('');
+  protected readonly submitNotes = signal('');
+  protected readonly submitSubmitting = signal(false);
+  protected readonly submitError = signal('');
 
   ngOnInit(): void {
     this.loadDeclarations();
@@ -324,53 +394,50 @@ export class EmployeeOvertimeComponent implements OnInit {
     });
   }
 
-  openDeclareDialog(): void {
-    this.declareDate = this._todayStr();
-    this.declareHours = 1;
-    this.declareReason = '';
-    this.declareError.set('');
-    this.declareDialogOpen.set(true);
+  openSubmitDialog(ot: OvertimeDeclaration): void {
+    this.selectedOt.set(ot);
+    this.submitReason.set('');
+    this.submitNotes.set('');
+    this.submitError.set('');
+    this.submitDialogOpen.set(true);
   }
 
-  closeDeclareDialog(): void {
-    this.declareDialogOpen.set(false);
+  closeSubmitDialog(): void {
+    this.submitDialogOpen.set(false);
+    this.selectedOt.set(null);
   }
 
-  submitDeclaration(): void {
-    this.declareError.set('');
-    const hours = Number(this.declareHours);
-    const reason = this.declareReason;
+  submitJustification(): void {
+    const ot = this.selectedOt();
+    if (!ot) return;
 
-    if (!hours || hours < 0.25 || hours > 24) {
-      this.declareError.set('Hours must be between 0.25 and 24');
+    const reason = this.submitReason();
+    if (!reason) {
+      this.submitError.set('Please select a reason');
       return;
     }
 
-    if (!reason?.trim()) {
-      this.declareError.set('Please provide a reason');
-      return;
-    }
-
-    this.declareSubmitting.set(true);
-    this.overtimeService.declare({
-      date: this.declareDate,
-      hours,
-      reason: reason.trim(),
+    this.submitSubmitting.set(true);
+    this.overtimeService.submitJustification(ot.id, {
+      reason,
+      notes: this.submitNotes() || undefined,
     }).subscribe({
       next: () => {
-        this.declareSubmitting.set(false);
-        this.closeDeclareDialog();
+        this.submitSubmitting.set(false);
+        this.closeSubmitDialog();
         this.loadDeclarations();
       },
       error: (err) => {
-        this.declareSubmitting.set(false);
-        this.declareError.set(err.error?.error?.message || 'Failed to submit declaration');
+        this.submitSubmitting.set(false);
+        this.submitError.set(err.error?.error?.message || 'Failed to submit justification');
       },
     });
   }
 
-  private _todayStr(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  handleCancel(id: number): void {
+    if (!confirm('Cancel this overtime declaration?')) return;
+    this.overtimeService.cancel(id).subscribe({
+      next: () => this.loadDeclarations(),
+    });
   }
 }

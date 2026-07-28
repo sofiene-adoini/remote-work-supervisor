@@ -9,6 +9,9 @@ export interface CompanyWorkPolicy {
   minimumBreakMinutes: number;
   autoOvertimeEnabled: boolean;
   overtimeStartsAfterDailyHours: number;
+  minimumOvertimeThresholdMinutes: number;
+  requireHrApproval: boolean;
+  requireJustification: boolean;
   allowClockInOutsideSchedule: boolean;
   allowWeekendWork: boolean;
   workingDays: string[];
@@ -26,6 +29,9 @@ const DEFAULT_POLICY: CompanyWorkPolicy = {
   minimumBreakMinutes: 30,
   autoOvertimeEnabled: true,
   overtimeStartsAfterDailyHours: 8,
+  minimumOvertimeThresholdMinutes: 15,
+  requireHrApproval: true,
+  requireJustification: true,
   allowClockInOutsideSchedule: true,
   allowWeekendWork: false,
   workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
@@ -86,6 +92,10 @@ export const WorkPolicyService = {
 
   overtimeThresholdMinutes(): number {
     return (cachedPolicy ?? DEFAULT_POLICY).overtimeStartsAfterDailyHours * 60;
+  },
+
+  minOvertimeThresholdMinutes(): number {
+    return (cachedPolicy ?? DEFAULT_POLICY).minimumOvertimeThresholdMinutes;
   },
 
   maxContinuousMinutes(): number {

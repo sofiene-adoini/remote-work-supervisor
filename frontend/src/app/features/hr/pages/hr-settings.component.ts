@@ -104,6 +104,11 @@ import { CompanyWorkPolicy } from '../../employee/models/employee.models';
                     [min]="1" [max]="24" step="0.5">
                 </div>
                 <div class="field">
+                  <label class="field-label">Minimum Overtime Threshold (minutes)</label>
+                  <input class="field-input" type="number" [(ngModel)]="policy()!.minimumOvertimeThresholdMinutes"
+                    [min]="0" [max]="240" step="5">
+                </div>
+                <div class="field">
                   <label class="field-label">Auto Overtime</label>
                   <div class="toggle-wrap">
                     <label class="toggle">
@@ -111,6 +116,26 @@ import { CompanyWorkPolicy } from '../../employee/models/employee.models';
                       <span class="toggle-slider"></span>
                     </label>
                     <span class="toggle-label">{{ policy()!.autoOvertimeEnabled ? 'Enabled' : 'Disabled' }}</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field-label">Require HR Approval</label>
+                  <div class="toggle-wrap">
+                    <label class="toggle">
+                      <input type="checkbox" [(ngModel)]="policy()!.requireHrApproval">
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">{{ policy()!.requireHrApproval ? 'Required' : 'Auto-approved' }}</span>
+                  </div>
+                </div>
+                <div class="field">
+                  <label class="field-label">Require Justification</label>
+                  <div class="toggle-wrap">
+                    <label class="toggle">
+                      <input type="checkbox" [(ngModel)]="policy()!.requireJustification">
+                      <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">{{ policy()!.requireJustification ? 'Required' : 'Optional' }}</span>
                   </div>
                 </div>
               </div>
