@@ -4,16 +4,41 @@ import { Observable } from 'rxjs';
 import { API_BASE_PATH } from '../../../core/constants/app.constants';
 import { OvertimeDeclaration } from '../models/employee.models';
 
+export interface OvertimeResponse {
+  declarations: OvertimeDeclaration[];
+  total?: number;
+  page?: number;
+  pageSize?: number;
+  totalPages?: number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class OvertimeService {
   private readonly http = inject(HttpClient);
   private readonly base = API_BASE_PATH;
 
-  getMyDeclarations(): Observable<{ declarations: OvertimeDeclaration[] }> {
-    return this.http.get<{ declarations: OvertimeDeclaration[] }>(`${this.base}/overtime-declarations/my`, { withCredentials: true });
+  getMyDeclarations(status?: string): Observable<OvertimeResponse> {
+    const params: Record<string, string> = {};
+    if (status) params['status'] = status;
+    return this.http.get<OvertimeResponse>(`${this.base}/overtime-declarations/my`, {
+      params,
+      withCredentials: true,
+    });
   }
 
-  declare(data: { date: string; hours: number; reason: string }): Observable<{ declaration: OvertimeDeclaration }> {
-    return this.http.post<{ declaration: OvertimeDeclaration }>(`${this.base}/overtime-declarations`, data, { withCredentials: true });
+  submitJustification(id: number, data: { reason: string; notes?: string }): Observable<{ declaration: OvertimeDeclaration }> {
+    return this.http.put<{ declaration: OvertimeDeclaration }>(
+      `${this.base}/overtime-declarations/${id}/submit`,
+      data,
+      { withCredentials: true },
+    );
+  }
+
+  cancel(id: number): Observable<{ declaration: OvertimeDeclaration }> {
+    return this.http.put<{ declaration: OvertimeDeclaration }>(
+      `${this.base}/overtime-declarations/${id}/cancel`,
+      {},
+      { withCredentials: true },
+    );
   }
 }

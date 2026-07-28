@@ -1,7 +1,6 @@
 import { WorkPolicyService, CompanyWorkPolicy } from '../../company-work-policy/services/work-policy.service';
 
 const SESSION_UID = 'api::session.session';
-const OT_UID = 'api::overtime-declaration.overtime-declaration';
 
 export type AttendanceStatus = 'completed' | 'underworked' | 'overtime' | 'absent' | 'day_off';
 export type AttendanceEvaluation = 'excellent' | 'good' | 'acceptable' | 'underworked' | 'absent' | 'holiday' | 'weekend' | 'break_violation' | 'overtime';

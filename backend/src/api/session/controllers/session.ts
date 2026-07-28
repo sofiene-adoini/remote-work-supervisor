@@ -2,6 +2,7 @@ import type { Context } from 'koa';
 import { createAndEmit } from '../../alert/services/notification.service';
 import { TimeCalculationService } from '../../company-work-policy/services/time-calculation.service';
 import { WorkPolicyService } from '../../company-work-policy/services/work-policy.service';
+import { OvertimeDetectionService } from '../../overtime-declaration/services/overtime-detection.service';
 
 const SESSION_UID = 'api::session.session';
 const BREAK_UID = 'api::break.break';
@@ -391,6 +392,10 @@ export default {
         sessionId: updated.id,
       }).catch(() => {});
     }
+
+    OvertimeDetectionService.detectAfterClockOut(userId, updated.id).catch((err) =>
+      strapi.log.error(`[Overtime] Detection failed: ${err.message}`),
+    );
 
     await emitSessionUpdate(userId);
 

@@ -53,10 +53,15 @@ export interface SessionUpdatedEvent {
 }
 
 export interface OvertimeStatusEvent {
-  declarationId: number;
+  overtimeId: number;
   userId: number;
   status: string;
+  overtimeMinutes?: number;
+  workedMinutes?: number;
+  expectedMinutes?: number;
 }
+
+export interface OvertimeDetectedEvent extends OvertimeStatusEvent {}
 
 export interface AlertCreatedEvent {
   id: number;
@@ -78,6 +83,7 @@ export class RealtimeService {
   readonly sessionChanged$ = new Subject<SessionStatusEvent>();
   readonly sessionUpdated$ = new Subject<SessionUpdatedEvent>();
   readonly overtimeChanged$ = new Subject<OvertimeStatusEvent>();
+  readonly overtimeDetected$ = new Subject<OvertimeDetectedEvent>();
   readonly alertCreated$ = new Subject<AlertCreatedEvent>();
 
   connect(): void {
@@ -100,6 +106,10 @@ export class RealtimeService {
 
     this.socket.on('overtime:status-changed', (payload: OvertimeStatusEvent) =>
       this.overtimeChanged$.next(payload),
+    );
+
+    this.socket.on('overtime:detected', (payload: OvertimeDetectedEvent) =>
+      this.overtimeDetected$.next(payload),
     );
 
     this.socket.on('alert:created', (payload: AlertCreatedEvent) =>

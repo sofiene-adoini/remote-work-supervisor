@@ -14,27 +14,54 @@
       "type": "date",
       "required": true
     },
-    "hours": {
-      "type": "decimal",
+    "workedMinutes": {
+      "type": "integer",
       "required": true,
-      "min": 0.25,
-      "max": 24
+      "min": 0
+    },
+    "expectedMinutes": {
+      "type": "integer",
+      "required": true,
+      "min": 0
+    },
+    "overtimeMinutes": {
+      "type": "integer",
+      "required": true,
+      "min": 0
     },
     "reason": {
-      "type": "text",
-      "required": true
+      "type": "text"
+    },
+    "notes": {
+      "type": "text"
     },
     "status": {
       "type": "enumeration",
-      "enum": ["pending", "approved", "rejected"],
-      "default": "pending",
+      "enum": ["detected", "submitted", "pending", "approved", "rejected", "cancelled"],
+      "default": "detected",
       "required": true
+    },
+    "justificationSubmittedAt": {
+      "type": "datetime"
+    },
+    "reviewedAt": {
+      "type": "datetime"
     },
     "user": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "overtimeDeclarations"
+    },
+    "session": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::session.session"
+    },
+    "reviewer": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
     }
   }
 }

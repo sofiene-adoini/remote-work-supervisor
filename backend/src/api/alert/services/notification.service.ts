@@ -12,7 +12,12 @@ export type AlertType =
   | 'agent_online'
   | 'continuous_work_warning'
   | 'break_violation'
-  | 'overtime_alert';
+  | 'overtime_alert'
+  | 'overtime_detected'
+  | 'overtime_submitted'
+  | 'overtime_approved'
+  | 'overtime_rejected'
+  | 'overtime_cancelled';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -37,6 +42,11 @@ const TITLE_MAP: Record<AlertType, string> = {
   continuous_work_warning: 'Continuous Work Warning',
   break_violation: 'Insufficient Break',
   overtime_alert: 'Overtime Alert',
+  overtime_detected: 'Overtime Detected',
+  overtime_submitted: 'Overtime Submitted',
+  overtime_approved: 'Overtime Approved',
+  overtime_rejected: 'Overtime Rejected',
+  overtime_cancelled: 'Overtime Cancelled',
 };
 
 export async function createAndEmit(params: CreateAlertParams) {

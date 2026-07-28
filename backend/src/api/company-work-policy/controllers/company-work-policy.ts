@@ -21,6 +21,7 @@ export default {
     const allowedFields = [
       'expectedDailyHours', 'expectedWeeklyHours', 'maximumDailyHours', 'maximumWeeklyHours',
       'minimumBreakMinutes', 'autoOvertimeEnabled', 'overtimeStartsAfterDailyHours',
+      'minimumOvertimeThresholdMinutes', 'requireHrApproval', 'requireJustification',
       'allowClockInOutsideSchedule', 'allowWeekendWork', 'workingDays',
       'lateToleranceMinutes', 'earlyLeaveToleranceMinutes',
       'maximumContinuousWorkHours', 'timezone',

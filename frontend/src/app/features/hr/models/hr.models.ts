@@ -27,10 +27,17 @@ export interface HrTeamMember {
 export interface HrOvertimeDeclaration {
   id: number;
   date: string;
-  hours: number;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  workedMinutes: number;
+  expectedMinutes: number;
+  overtimeMinutes: number;
+  reason?: string;
+  notes?: string;
+  status: 'detected' | 'submitted' | 'pending' | 'approved' | 'rejected' | 'cancelled';
+  justificationSubmittedAt?: string;
+  reviewedAt?: string;
   user?: { id: number; fullName: string; email: string };
+  session?: { id: number; clockIn: string; clockOut: string };
+  reviewer?: { id: number; fullName: string } | null;
   createdAt: string;
 }
 
@@ -106,6 +113,9 @@ export interface CompanyWorkPolicy {
   minimumBreakMinutes: number;
   autoOvertimeEnabled: boolean;
   overtimeStartsAfterDailyHours: number;
+  minimumOvertimeThresholdMinutes: number;
+  requireHrApproval: boolean;
+  requireJustification: boolean;
   allowClockInOutsideSchedule: boolean;
   allowWeekendWork: boolean;
   workingDays: string[];
