@@ -129,6 +129,47 @@ plugin.contentTypes.user.schema.attributes.agentDevices = {
 
     return {
       ...authController,
+      async forgotPassword(ctx: any) {
+        const { email } = ctx.request.body ?? {};
+        if (typeof email !== 'string') {
+          return ctx.badRequest('Email is required');
+        }
+
+        const user = await strapiInstance.db.query(USER_UID).findOne({
+          where: { email: email.toLowerCase() },
+        });
+
+        if (!user || user.blocked) {
+          return ctx.send({ ok: true });
+        }
+
+        const resetPasswordToken = crypto.randomBytes(64).toString('hex');
+
+        await strapiInstance.db.query(USER_UID).update({
+          where: { id: user.id },
+          data: { resetPasswordToken },
+        });
+
+        const frontendUrl = (process.env.CORS_ORIGIN || 'http://localhost:4200').split(',')[0].trim();
+        const resetUrl = `${frontendUrl}/reset-password?code=${resetPasswordToken}`;
+
+        try {
+          await strapiInstance.plugin('email').service('email').send({
+            to: user.email,
+            from: process.env.SMTP_FROM || 'noreply@assas.app',
+            subject: 'Reset your Assas password',
+            text: `Click the link to reset your password: ${resetUrl}`,
+            html: `<p>You requested a password reset.</p><p><a href="${resetUrl}">Reset your password</a></p><p>If you didn't request this, ignore this email.</p>`,
+          });
+          strapiInstance.log.info(`[auth] Reset email sent to ${email}`);
+        } catch (err: any) {
+          strapiInstance.log.warn(`[auth] Failed to send reset email: ${err.message}`);
+          strapiInstance.log.info(`[auth] Reset link for ${email}: ${resetUrl}`);
+        }
+
+        ctx.send({ ok: true });
+      },
+
       async callback(ctx: any) {
         const identifier = ctx.request.body?.identifier;
 

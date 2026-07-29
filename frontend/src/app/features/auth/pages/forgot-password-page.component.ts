@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { AutofocusDirective } from '../../../shared/directives/autofocus.directive';
 
 @Component({
@@ -55,6 +56,7 @@ import { AutofocusDirective } from '../../../shared/directives/autofocus.directi
 export class ForgotPasswordPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly notif = inject(NotificationService);
 
   protected loading = false;
   protected status = '';
@@ -86,9 +88,12 @@ export class ForgotPasswordPageComponent {
       .subscribe({
         next: () => {
           this.status = 'If that email exists, a reset link has been sent.';
+          this.notif.success('Check the server console for the reset link.', 'Email sent');
         },
-        error: () => {
-          this.submitError = 'The reset link could not be sent. Try again.';
+        error: (err: any) => {
+          const serverMessage = err?.error?.error?.message;
+          this.submitError = serverMessage || 'The reset link could not be sent. Try again.';
+          this.notif.error(this.submitError, 'Reset password failed');
         },
       });
   }
