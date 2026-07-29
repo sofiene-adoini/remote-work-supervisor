@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { API_BASE_PATH } from '../../../core/constants/app.constants';
-import { Project, TimeEntry } from '../models/employee.models';
+import { Project, ProjectAllocation } from '../models/employee.models';
 
 @Injectable({ providedIn: 'root' })
 export class ProjectsService {
@@ -13,7 +13,15 @@ export class ProjectsService {
     return this.http.get<{ projects: Project[] }>(`${this.base}/projects/my`, { withCredentials: true });
   }
 
-  logTime(data: { projectId: number; date: string; hours: number; description?: string }): Observable<{ entry: TimeEntry }> {
-    return this.http.post<{ entry: TimeEntry }>(`${this.base}/time-entries`, data, { withCredentials: true });
+  getActiveAllocation(): Observable<{ allocation: ProjectAllocation | null }> {
+    return this.http.get<{ allocation: ProjectAllocation | null }>(`${this.base}/project-allocations/active`, { withCredentials: true });
+  }
+
+  switchProject(projectId: number): Observable<{ allocation: ProjectAllocation }> {
+    return this.http.post<{ allocation: ProjectAllocation }>(`${this.base}/project-allocations/switch`, { projectId }, { withCredentials: true });
+  }
+
+  stopProject(): Observable<{ allocation: null }> {
+    return this.http.post<{ allocation: null }>(`${this.base}/project-allocations/stop`, {}, { withCredentials: true });
   }
 }

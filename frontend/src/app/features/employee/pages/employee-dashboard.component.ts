@@ -12,7 +12,7 @@ import { AlertsService } from '../services/alerts.service';
 import { OvertimeService } from '../services/overtime.service';
 import { ProjectsService } from '../services/projects.service';
 import { Alert, DailyStats, WeeklyStats, OvertimeDeclaration } from '../models/employee.models';
-import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetectedEvent } from '../../../core/services/realtime.service';
+import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetectedEvent, AllocationChangedEvent } from '../../../core/services/realtime.service';
 
 @Component({
   selector: 'app-employee-dashboard',
@@ -255,6 +255,14 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetect
             <span class="action-sub">{{ detectedOvertime() ? 'View details' : 'Manage' }}</span>
             <svg lucideArrowRight class="action-arrow" aria-hidden="true"></svg>
           </a>
+          @if (activeAlloc()) {
+            <a class="action-card action-card-project" routerLink="/employee/projects">
+              <svg lucideFolderOpen class="action-icon" aria-hidden="true"></svg>
+              <span class="action-label">{{ allocProjectName() }}</span>
+              <span class="action-sub action-sub-project">{{ allocElapsed() }} elapsed</span>
+              <svg lucideArrowRight class="action-arrow" aria-hidden="true"></svg>
+            </a>
+          }
         </div>
       </div>
     </div>
@@ -625,6 +633,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetect
     .action-icon { width: 24px; height: 24px; color: var(--rws-accent); }
     .action-label { font-size: 0.9rem; font-weight: 600; color: var(--rws-text); }
     .action-sub { font-size: 0.8rem; color: var(--rws-text-muted); }
+    .action-sub-project { font-family: var(--rws-font-mono); font-weight: 500; color: var(--rws-accent); }
 
     .action-arrow {
       width: 16px;
@@ -680,6 +689,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   protected readonly detectedOvertime = signal<OvertimeDeclaration | null>(null);
   protected readonly projectCount = signal(0);
   protected readonly projectsLoading = signal(true);
+  protected readonly activeAlloc = signal<{ projectId: number; projectName: string; startTime: string } | null>(null);
 
   protected readonly totalWeekHours = computed(() => {
     const hours = this.weeklyHours();
@@ -690,6 +700,17 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     const stats = this.dailyStats();
     if (!stats || stats.expectedMinutes === 0) return 0;
     return Math.min(100, Math.round((stats.workedMinutes / stats.expectedMinutes) * 100));
+  });
+
+  protected readonly allocProjectName = computed(() => this.activeAlloc()?.projectName ?? '—');
+
+  protected readonly allocElapsed = computed(() => {
+    const alloc = this.activeAlloc();
+    if (!alloc?.startTime) return '—';
+    const min = Math.round((Date.now() - new Date(alloc.startTime).getTime()) / 60000);
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
   });
 
   protected readonly barWidth = (day: string) => {
@@ -709,6 +730,7 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     this.loadWeeklyHours();
     this.loadRecentAlerts();
     this.loadTodayOvertime();
+    this.loadActiveAllocation();
     this.loadProjectCount();
     this.subscribeToRealtime();
   }
@@ -762,6 +784,13 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
     this.realtime.overtimeChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.loadTodayOvertime();
     });
+
+    this.realtime.allocationChanged$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((event: AllocationChangedEvent) => {
+      this.activeAlloc.set(event.allocationId
+        ? { projectId: event.projectId!, projectName: event.projectName!, startTime: event.startTime! }
+        : null
+      );
+    });
   }
 
   private loadInitialStatus(): void {
@@ -814,6 +843,17 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
         const today = new Date().toISOString().slice(0, 10);
         const todayOt = res.declarations.find((d) => d.date === today && d.status !== 'cancelled');
         this.detectedOvertime.set(todayOt || null);
+      },
+    });
+  }
+
+  private loadActiveAllocation(): void {
+    this.projectsService.getActiveAllocation().subscribe({
+      next: (res) => {
+        this.activeAlloc.set(res.allocation
+          ? { projectId: res.allocation.projectId!, projectName: res.allocation.projectName!, startTime: res.allocation.startTime! }
+          : null
+        );
       },
     });
   }

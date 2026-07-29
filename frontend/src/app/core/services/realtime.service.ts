@@ -75,6 +75,14 @@ export interface AlertCreatedEvent {
   session?: { id: number } | null;
 }
 
+export interface AllocationChangedEvent {
+  userId: number;
+  allocationId: number | null;
+  projectId: number | null;
+  projectName: string | null;
+  startTime: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   private readonly auth = inject(AuthService);
@@ -85,6 +93,7 @@ export class RealtimeService {
   readonly overtimeChanged$ = new Subject<OvertimeStatusEvent>();
   readonly overtimeDetected$ = new Subject<OvertimeDetectedEvent>();
   readonly alertCreated$ = new Subject<AlertCreatedEvent>();
+  readonly allocationChanged$ = new Subject<AllocationChangedEvent>();
 
   connect(): void {
     if (this.socket?.connected) return;
@@ -114,6 +123,10 @@ export class RealtimeService {
 
     this.socket.on('alert:created', (payload: AlertCreatedEvent) =>
       this.alertCreated$.next(payload),
+    );
+
+    this.socket.on('project:allocation-changed', (payload: AllocationChangedEvent) =>
+      this.allocationChanged$.next(payload),
     );
 
     this.socket.on('connect_error', (err) => {

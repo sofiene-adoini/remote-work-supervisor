@@ -70,9 +70,18 @@ export interface HrProject {
   id: number;
   name: string;
   description: string;
-  status: string;
+  status: 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled' | 'archived';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  client?: string;
+  expectedStart?: string;
+  expectedEnd?: string;
+  estimatedHours?: number;
+  color?: string;
+  manager?: { id: number; fullName: string } | null;
   team?: { id: number; name: string } | null;
   users: { id: number; fullName: string }[];
+  totalHours?: number;
+  activeHoursThisWeek?: number;
   createdAt: string;
 }
 

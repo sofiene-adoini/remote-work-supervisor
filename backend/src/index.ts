@@ -260,30 +260,41 @@ export default {
       }
     };
 
-    const otCustomActions = [
+    const employeeActions = [
       'api::overtime-declaration.overtime-declaration.myDeclarations',
       'api::overtime-declaration.overtime-declaration.submitJustification',
       'api::overtime-declaration.overtime-declaration.cancel',
+      'api::project.project.myProjects',
+      'api::project-time-allocation.project-time-allocation.myActive',
+      'api::project-time-allocation.project-time-allocation.switchProject',
+      'api::project-time-allocation.project-time-allocation.stopProject',
+      'api::project-time-allocation.project-time-allocation.myProjectTime',
+      'api::alert.alert.my',
     ];
 
-    const otHrActions = [
+    const hrActions = [
       'api::overtime-declaration.overtime-declaration.pending',
       'api::overtime-declaration.overtime-declaration.allDeclarations',
       'api::overtime-declaration.overtime-declaration.approve',
       'api::overtime-declaration.overtime-declaration.reject',
+      'api::project.project.listAll',
+      'api::project.project.create',
+      'api::project.project.update',
+      'api::project.project.getById',
+      'api::project.project.reassign',
     ];
 
     for (const role of ensuredRoles) {
       await ensurePermission(role.id, 'plugin::users-permissions.auth.me');
 
-      for (const action of otCustomActions) {
+      for (const action of employeeActions) {
         await ensurePermission(role.id, action);
       }
 
       if (role.name === 'HR' || role.name === 'Admin') {
         await ensurePermission(role.id, 'plugin::users-permissions.auth.invite');
 
-        for (const action of otHrActions) {
+        for (const action of hrActions) {
           await ensurePermission(role.id, action);
         }
       }

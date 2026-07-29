@@ -56,6 +56,12 @@
       "relation": "oneToMany",
       "target": "api::break.break",
       "mappedBy": "session"
+    },
+    "projectTimeAllocations": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project-time-allocation.project-time-allocation",
+      "mappedBy": "session"
     }
   }
 }
