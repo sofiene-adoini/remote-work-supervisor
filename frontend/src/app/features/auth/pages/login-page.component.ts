@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../services/auth.service';
+import { NotificationService } from '../../../core/services/notification.service';
 import { AutofocusDirective } from '../../../shared/directives/autofocus.directive';
 
 @Component({
@@ -66,6 +67,7 @@ export class LoginPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly notif = inject(NotificationService);
 
   protected loading = false;
   protected submitError = '';
@@ -96,8 +98,10 @@ export class LoginPageComponent {
       .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (user) => void this.router.navigateByUrl(this.auth.redirectPathFor(user)),
-        error: () => {
-          this.submitError = "That email or password isn't right. Try again.";
+        error: (err: any) => {
+          const serverMessage = err?.error?.error?.message;
+          this.submitError = serverMessage || "That email or password isn't right. Try again.";
+          this.notif.error(this.submitError, 'Sign in failed');
         },
       });
   }

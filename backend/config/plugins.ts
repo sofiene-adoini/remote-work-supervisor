@@ -49,6 +49,24 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       },
     },
   },
+  email: {
+    config: {
+      provider: 'nodemailer',
+      providerOptions: {
+        host: env('SMTP_HOST', 'smtp.gmail.com'),
+        port: env.int('SMTP_PORT', 587),
+        secure: false,
+        auth: {
+          user: env('SMTP_USER'),
+          pass: env('SMTP_PASS'),
+        },
+      },
+      settings: {
+        defaultFrom: env('SMTP_FROM', 'noreply@assas.app'),
+        defaultReplyTo: env('SMTP_FROM', 'noreply@assas.app'),
+      },
+    },
+  },
   upload: {
     config: {
       security: {

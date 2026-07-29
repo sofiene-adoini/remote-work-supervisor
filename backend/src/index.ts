@@ -224,7 +224,7 @@ export default {
       value: {
         ...advanced,
         allow_register: false,
-        email_reset_password: '/set-initial-password',
+        email_reset_password: '/reset-password',
       },
     });
 
