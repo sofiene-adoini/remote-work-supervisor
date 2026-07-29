@@ -88,7 +88,7 @@ export class ForgotPasswordPageComponent {
       .subscribe({
         next: () => {
           this.status = 'If that email exists, a reset link has been sent.';
-          this.notif.success('Check the server console for the reset link.', 'Email sent');
+          this.notif.success('Check your email inbox for the reset link.', 'Email sent');
         },
         error: (err: any) => {
           const serverMessage = err?.error?.error?.message;
