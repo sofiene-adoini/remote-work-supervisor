@@ -4,6 +4,7 @@ export interface Break {
   end: string | null;
   duration: number;
   isAuto: boolean;
+  reason?: string | null;
 }
 
 export interface Session {

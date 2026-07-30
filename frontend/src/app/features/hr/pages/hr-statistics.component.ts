@@ -366,12 +366,28 @@ import {
                           </span>
                           <span class="tl-hours">{{ (day.workedMinutes / 60) | number:'1.0-1' }}h worked</span>
                         </div>
-                        @if (day.breaks.length > 0) {
-                          <div class="tl-breaks">
-                            <svg lucideCoffee class="icon-xs"></svg>
-                            {{ day.breaks.length }} break(s) — {{ day.breakMinutes }}min total
-                          </div>
-                        }
+@if (day.breaks.length > 0) {
+  <div class="tl-breaks">
+    <svg lucideCoffee class="icon-xs"></svg>
+    {{ day.breaks.length }} break(s) — {{ day.breakMinutes }}min total
+  </div>
+  @for (brk of day.breaks; track $index) {
+    <div class="tl-break-detail">
+      <span class="tl-break-tag" [class.tl-break-auto]="brk.isAutomatic">
+        {{ brk.isAutomatic ? 'Auto' : 'Manual' }}
+      </span>
+      <span class="tl-break-time">{{ brk.start | date:'HH:mm' }} → {{ brk.end ? (brk.end | date:'HH:mm') : 'ongoing' }}</span>
+      <span class="tl-break-mins">{{ brk.minutes }}min</span>
+      @if (brk.isAutomatic) {
+        <span class="tl-break-auto-text">Automatic Break</span>
+      } @else if (brk.reason) {
+        <span class="tl-break-reason">{{ brk.reason }}</span>
+      } @else {
+        <span class="tl-break-noreason">No reason provided</span>
+      }
+    </div>
+  }
+}
                         @if (day.overtimeMinutes > 0) {
                           <div class="tl-ot">{{ (day.overtimeMinutes / 60) | number:'1.0-1' }}h overtime</div>
                         }
@@ -655,6 +671,14 @@ import {
       font-size: 0.8125rem; color: #9333ea;
     }
     .tl-ot { margin-top: 0.375rem; font-size: 0.8125rem; font-weight: 500; color: #d97706; }
+    .tl-break-detail { display: flex; align-items: center; flex-wrap: wrap; gap: 0.25rem 0.375rem; margin-top: 0.25rem; font-size: 0.75rem; color: var(--rws-text-muted); }
+    .tl-break-tag { font-size: 0.625rem; font-weight: 600; padding: 0.0625rem 0.375rem; border-radius: 4px; background: rgba(19,141,158,0.1); color: var(--rws-accent); white-space: nowrap; }
+    .tl-break-tag.tl-break-auto { background: rgba(245,158,11,0.1); color: #d97706; }
+    .tl-break-time { font-size: 0.6875rem; font-family: var(--rws-font-mono); color: var(--rws-text-muted); white-space: nowrap; }
+    .tl-break-mins { font-size: 0.6875rem; color: var(--rws-text-muted); font-family: var(--rws-font-mono); }
+    .tl-break-reason { font-style: italic; color: var(--rws-text); }
+    .tl-break-auto-text { font-size: 0.6875rem; color: #d97706; font-weight: 500; }
+    .tl-break-noreason { font-size: 0.6875rem; color: var(--rws-text-muted); font-style: italic; opacity: 0.7; }
     .tl-alert { margin-top: 0.375rem; font-size: 0.8125rem; font-weight: 500; color: #dc2626; }
     .tl-dayoff { font-size: 0.8125rem; color: #16a34a; font-style: italic; }
     .tl-absent-text { font-size: 0.8125rem; color: var(--rws-text-muted); font-style: italic; }

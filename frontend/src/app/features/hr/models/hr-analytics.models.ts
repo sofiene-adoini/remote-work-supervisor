@@ -57,7 +57,7 @@ export interface TimelineEntry {
   isWorkingDay: boolean;
   clockIn: string | null;
   clockOut: string | null;
-  breaks: { start: string; end: string | null; minutes: number }[];
+  breaks: { start: string; end: string | null; minutes: number; isAutomatic: boolean; reason: string | null }[];
   workedMinutes: number;
   breakMinutes: number;
   overtimeMinutes: number;

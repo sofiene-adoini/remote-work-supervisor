@@ -421,11 +421,19 @@ export class TimeTimelineComponent {
       }
 
       if (s.breakStart) {
+        const brk = s.breaks?.length ? s.breaks[0] : null;
+        const isAuto = brk?.isAuto ?? false;
+        let detail = '';
+        if (isAuto) {
+          detail = 'Automatic Break';
+        } else if (brk?.reason) {
+          detail = `Reason: ${brk.reason}`;
+        }
         events.push({
           type: 'break-start',
           time: this.formatTime(s.breakStart),
           label: 'Break Started',
-          detail: '',
+          detail,
           sortKey: new Date(s.breakStart).getTime(),
         });
       }

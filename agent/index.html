@@ -208,6 +208,34 @@
       font-size: 0.75rem; padding: 0.375rem 0.75rem;
     }
 
+    /* ── Break reason modal ─────────────────────────────────────────── */
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.35); align-items: center; justify-content: center;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+      padding: 1.5rem; width: 320px; max-width: 90vw;
+    }
+    .modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #1a1d23; }
+    .modal-field { margin-bottom: 1rem; }
+    .modal-field label {
+      display: block; font-size: 0.75rem; font-weight: 600; color: #374151;
+      margin-bottom: 0.375rem; text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .modal-field select, .modal-field input {
+      width: 100%; padding: 0.5rem 0.625rem; border: 1.5px solid #d6dce5;
+      border-radius: 8px; font-family: inherit; font-size: 0.875rem;
+      transition: border-color 150ms ease;
+    }
+    .modal-field select:focus, .modal-field input:focus {
+      outline: none; border-color: #138D9E; box-shadow: 0 0 0 3px rgb(19 141 158 / 22%);
+    }
+    .modal-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+    .modal-actions .btn { padding: 0.5rem 1rem; font-size: 0.8125rem; }
+
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
@@ -297,6 +325,33 @@
       <div style="display:flex;align-items:center;gap:0.75rem;">
         <span class="version" id="version-label"></span>
         <button id="btn-logout" class="btn btn-ghost logout-btn">Logout</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- BREAK REASON MODAL                                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <div id="break-reason-modal" class="modal-overlay">
+    <div class="modal-box">
+      <h3>Start Break</h3>
+      <div class="modal-field">
+        <label for="break-reason-select">Reason</label>
+        <select id="break-reason-select">
+          <option value="">Select a reason…</option>
+          <option value="Lunch">Lunch</option>
+          <option value="Personal">Personal</option>
+          <option value="Meeting">Meeting</option>
+          <option value="__other__">Other (specify)…</option>
+        </select>
+      </div>
+      <div class="modal-field" id="break-reason-other-wrapper" style="display:none;">
+        <label for="break-reason-other">Specify reason</label>
+        <input type="text" id="break-reason-other" placeholder="e.g. Doctor appointment" maxlength="100" />
+      </div>
+      <div class="modal-actions">
+        <button id="btn-break-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="btn-break-confirm" class="btn btn-primary" disabled>Start Break</button>
       </div>
     </div>
   </div>
@@ -442,8 +497,77 @@
       if (res.ok) refreshStatus();
     });
 
+    // ── Break reason modal ──────────────────────────────────────────
+
+    const breakModal = $('#break-reason-modal');
+    const breakReasonSelect = $('#break-reason-select');
+    const breakReasonOther = $('#break-reason-other');
+    const breakReasonOtherWrapper = $('#break-reason-other-wrapper');
+    const btnBreakConfirm = $('#btn-break-confirm');
+    const btnBreakCancel = $('#btn-break-cancel');
+    let breakResolve = null;
+
+    breakModal.addEventListener('click', (e) => {
+      if (e.target === breakModal) cancelBreakModal();
+    });
+
+    function cancelBreakModal() {
+      breakModal.classList.remove('visible');
+      breakReasonSelect.value = '';
+      breakReasonOtherWrapper.style.display = 'none';
+      breakReasonOther.value = '';
+      btnBreakConfirm.disabled = true;
+      if (breakResolve) { breakResolve(null); breakResolve = null; }
+    }
+
+    breakReasonSelect.addEventListener('change', () => {
+      const val = breakReasonSelect.value;
+      if (val === '__other__') {
+        breakReasonOtherWrapper.style.display = '';
+        breakReasonOther.focus();
+        btnBreakConfirm.disabled = !breakReasonOther.value.trim();
+      } else {
+        breakReasonOtherWrapper.style.display = 'none';
+        btnBreakConfirm.disabled = !val;
+      }
+    });
+
+    breakReasonOther.addEventListener('input', () => {
+      if (breakReasonSelect.value === '__other__') {
+        btnBreakConfirm.disabled = !breakReasonOther.value.trim();
+      }
+    });
+
+    function showBreakReasonModal() {
+      return new Promise((resolve) => {
+        breakResolve = resolve;
+        breakReasonSelect.value = '';
+        breakReasonOtherWrapper.style.display = 'none';
+        breakReasonOther.value = '';
+        btnBreakConfirm.disabled = true;
+        breakModal.classList.add('visible');
+        breakReasonSelect.focus();
+      });
+    }
+
+    btnBreakConfirm.addEventListener('click', () => {
+      let reason = breakReasonSelect.value;
+      if (reason === '__other__') reason = breakReasonOther.value.trim();
+      if (!reason) return;
+      breakModal.classList.remove('visible');
+      breakReasonSelect.value = '';
+      breakReasonOtherWrapper.style.display = 'none';
+      breakReasonOther.value = '';
+      btnBreakConfirm.disabled = true;
+      if (breakResolve) { breakResolve(reason); breakResolve = null; }
+    });
+
+    btnBreakCancel.addEventListener('click', cancelBreakModal);
+
     $('#btn-break-start').addEventListener('click', async () => {
-      const res = await window.agent.startBreak('manual');
+      const reason = await showBreakReasonModal();
+      if (!reason) return;
+      const res = await window.agent.startBreak(reason);
       if (res.ok) refreshStatus();
     });
 

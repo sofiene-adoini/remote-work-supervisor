@@ -612,11 +612,16 @@ export interface ApiBreakBreak extends Struct.CollectionTypeSchema {
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::break.break'> &
       Schema.Attribute.Private;
     publishedAt: Schema.Attribute.DateTime;
+    reason: Schema.Attribute.String;
     session: Schema.Attribute.Relation<'manyToOne', 'api::session.session'>;
     start: Schema.Attribute.DateTime & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    user: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
   };
 }
 

@@ -156,6 +156,9 @@ import { SessionWithWorked, CompanyWorkPolicy } from '../../models/employee.mode
                                   <span class="break-time mono">{{ formatTime(brk.start) }} — {{ brk.end ? formatTime(brk.end) : 'ongoing' }}</span>
                                   <span class="break-duration mono">{{ formatBreak(brk.duration) }}</span>
                                   <span class="break-type" [class.auto]="brk.isAuto">{{ brk.isAuto ? 'Auto' : 'Manual' }}</span>
+                                  @if (brk.reason) {
+                                    <span class="break-reason">{{ brk.reason }}</span>
+                                  }
                                 </div>
                               }
                             </div>
@@ -252,6 +255,9 @@ import { SessionWithWorked, CompanyWorkPolicy } from '../../models/employee.mode
                         <span class="break-time mono">{{ formatTime(brk.start) }} — {{ brk.end ? formatTime(brk.end) : 'ongoing' }}</span>
                         <span class="break-duration mono">{{ formatBreak(brk.duration) }}</span>
                         <span class="break-type" [class.auto]="brk.isAuto">{{ brk.isAuto ? 'Auto' : 'Manual' }}</span>
+                        @if (brk.reason) {
+                          <span class="break-reason">{{ brk.reason }}</span>
+                        }
                       </div>
                     }
                   } @else if (session.totalBreakMinutes > 0) {
@@ -572,6 +578,17 @@ import { SessionWithWorked, CompanyWorkPolicy } from '../../models/employee.mode
     .break-type.auto {
       background: rgba(245, 158, 11, 0.1);
       color: #d97706;
+    }
+
+    .break-reason {
+      font-size: 0.75rem;
+      color: var(--rws-text-muted, #6b7280);
+      font-style: italic;
+      margin-left: auto;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .breaks-note {

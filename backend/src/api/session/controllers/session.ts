@@ -467,7 +467,9 @@ export default {
         start: now,
         duration: 0,
         isAuto,
+        reason: isAuto ? null : (reason?.trim() || null),
         session: session.id,
+        user: userId,
       },
     });
 
@@ -623,6 +625,7 @@ export default {
         end: b.end,
         duration: b.duration,
         isAuto: b.isAuto,
+        reason: b.reason,
       })),
     }));
 
@@ -648,6 +651,14 @@ export default {
     const enriched = sessions.map((s) => ({
       ...s,
       workedMinutes: TimeCalculationService.computeWorkedMinutes(s, new Date()),
+      breaks: (s.breaks || []).map((b: any) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        duration: b.duration,
+        isAuto: b.isAuto,
+        reason: b.reason,
+      })),
     }));
 
     const totalWorkedMin = enriched.reduce((sum, s) => sum + s.workedMinutes, 0);
@@ -696,6 +707,7 @@ export default {
         end: b.end,
         duration: b.duration,
         isAuto: b.isAuto,
+        reason: b.reason,
       })),
     }));
 

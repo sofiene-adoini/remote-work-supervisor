@@ -392,7 +392,7 @@ export default {
         user: parseInt(id, 10),
         clockIn: { $gte: start.toISOString(), $lte: end.toISOString() },
       },
-      populate: ['user'],
+      populate: ['user', 'breaks'],
       orderBy: { clockIn: 'asc' },
     });
 
@@ -417,6 +417,13 @@ export default {
       byDay.get(day)!.push(s);
     }
 
+    function toLocalDateStr(d: Date): string {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const timeline: any[] = [];
 
@@ -424,7 +431,7 @@ export default {
     while (cursor <= end) {
       const dayKey = cursor.toDateString();
       const daySessions = byDay.get(dayKey) || [];
-      const dayStr = cursor.toISOString().split('T')[0];
+      const dayStr = toLocalDateStr(cursor);
 
       const dayAlerts = alerts.filter((a: any) => new Date(a.createdAt).toDateString() === dayKey);
       const dayScreenshots = screenshots.filter((s: any) => new Date(s.capturedAt).toDateString() === dayKey);
@@ -452,18 +459,21 @@ export default {
         let lastOut: string | null = null;
         let dayWorked = 0;
         let dayBreak = 0;
-        const breaks: { start: string; end: string | null; minutes: number }[] = [];
+        const breaks: { start: string; end: string | null; minutes: number; isAutomatic: boolean; reason: string | null }[] = [];
 
         for (const s of daySessions) {
           if (!firstIn || s.clockIn < firstIn) firstIn = s.clockIn;
           if (s.clockOut && (!lastOut || s.clockOut > lastOut)) lastOut = s.clockOut;
           dayWorked += computeSessionWorkedMinutes(s, new Date());
           dayBreak += s.totalBreakMinutes || 0;
-          if (s.breakStart) {
+          const sessionBreaks: any[] = s.breaks || [];
+          for (const b of sessionBreaks) {
             breaks.push({
-              start: s.breakStart,
-              end: s.breakEnd || null,
-              minutes: s.totalBreakMinutes || 0,
+              start: b.start,
+              end: b.end || null,
+              minutes: b.duration || 0,
+              isAutomatic: b.isAuto || false,
+              reason: b.reason || null,
             });
           }
         }
