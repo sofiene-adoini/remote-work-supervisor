@@ -184,6 +184,67 @@ export interface TeamMember {
   lastActivity?: string;
 }
 
+export interface WorkspaceTeamMember {
+  id: number;
+  fullName: string;
+  email: string;
+  status: 'active' | 'break' | 'idle' | 'clocked_out';
+  hoursToday: number;
+  isLeader: boolean;
+  isSelf: boolean;
+}
+
+export interface Contribution {
+  hoursTotal: number;
+  hoursThisWeek: number;
+  hoursToday: number;
+  hoursLastWeek: number;
+  percentage: number;
+}
+
+export interface WorkspaceProject {
+  id: number;
+  name: string;
+  description: string | null;
+  status: string;
+  priority: string | null;
+  estimatedHours: number | null;
+  expectedEnd: string | null;
+  color: string | null;
+  totalHours: number;
+  manager: { id: number; fullName: string } | null;
+  progress: number | null;
+  myContribution: Contribution;
+}
+
+export interface WorkspaceTeam {
+  id: number;
+  name: string;
+  description: string | null;
+  leader: { id: number; fullName: string; email: string } | null;
+  memberCount: number;
+  members: WorkspaceTeamMember[];
+  projectCount: number;
+  projects: WorkspaceProject[];
+  createdAt: string | null;
+}
+
+export interface WorkloadSummary {
+  activeNow: number;
+  onBreak: number;
+  offline: number;
+  activeProjects: number;
+  completedProjects: number;
+  hoursWorkedThisWeek: number;
+}
+
+export interface WorkspaceData {
+  user: { id: number; fullName: string; email: string };
+  role: { id: number; name: string; type: string } | null;
+  team: WorkspaceTeam | null;
+  workload: WorkloadSummary | null;
+}
+
 export interface CompanyWorkPolicy {
   id?: number;
   expectedDailyHours: number;
