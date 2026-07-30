@@ -73,6 +73,16 @@ export class HrAnalyticsService {
     });
   }
 
+  getEmployeeBreaks(userId: number, start?: string, end?: string): Observable<{ breaks: any[] }> {
+    let params = new HttpParams();
+    if (start) params = params.set('start', start);
+    if (end) params = params.set('end', end);
+    return this.http.get<{ breaks: any[] }>(`${this.base}/breaks/employee/${userId}`, {
+      params,
+      withCredentials: true,
+    });
+  }
+
   exportCsv(query: EmployeeQuery): void {
     const params = this.toParams(query);
     window.open(`${this.base}/hr-analytics/export?${params.toString()}`, '_blank');

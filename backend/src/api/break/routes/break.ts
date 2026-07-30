@@ -8,5 +8,17 @@ export default {
       handler: 'break.bySession',
       config: { policies: [] },
     },
+    {
+      method: 'GET',
+      path: '/breaks/my',
+      handler: 'break.my',
+      config: { policies: [] },
+    },
+    {
+      method: 'GET',
+      path: '/breaks/employee/:userId',
+      handler: 'break.employee',
+      config: { policies: [] },
+    },
   ],
 };

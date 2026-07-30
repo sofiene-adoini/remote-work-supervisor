@@ -27,11 +27,19 @@
       "default": false,
       "required": true
     },
+    "reason": {
+      "type": "string"
+    },
     "session": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::session.session",
       "inversedBy": "breaks"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
     }
   }
 }

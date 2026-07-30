@@ -72,6 +72,16 @@ export class TimeEntriesService {
     });
   }
 
+  getMyBreaks(start?: string, end?: string): Observable<{ breaks: any[] }> {
+    const params: any = {};
+    if (start) params.start = start;
+    if (end) params.end = end;
+    return this.http.get<{ breaks: any[] }>(`${API_BASE_PATH}/breaks/my`, {
+      params,
+      withCredentials: true,
+    });
+  }
+
   getEmployeeStats(): Observable<EmployeeStatsResponse> {
     return this.http.get<EmployeeStatsResponse>(`${API_BASE_PATH}/work-stats/employee`, { withCredentials: true });
   }
