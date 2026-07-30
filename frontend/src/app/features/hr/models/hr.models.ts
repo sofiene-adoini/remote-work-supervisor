@@ -12,7 +12,12 @@ export interface HrDashboardStats {
 export interface HrTeam {
   id: number;
   name: string;
+  description: string | null;
+  leader: { id: number; fullName: string; email: string } | null;
   memberCount: number;
+  activeMemberCount: number;
+  projectCount: number;
+  createdAt: string | null;
 }
 
 export interface HrTeamMember {
@@ -21,6 +26,7 @@ export interface HrTeamMember {
   email: string;
   status: 'active' | 'break' | 'idle' | 'clocked_out';
   hoursToday: number;
+  isLeader?: boolean;
   team?: { id: number; name: string } | null;
 }
 
@@ -63,16 +69,31 @@ export interface HrUnassignedEmployee {
 export interface HrTeamDetail {
   id: number;
   name: string;
-  users: { id: number; fullName: string; email: string }[];
+  description: string | null;
+  leader: { id: number; fullName: string; email: string } | null;
+  memberCount: number;
+  projectCount: number;
+  projects: { id: number; name: string }[];
+  members: HrTeamMember[];
+  createdAt: string | null;
 }
 
 export interface HrProject {
   id: number;
   name: string;
   description: string;
-  status: string;
+  status: 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled' | 'archived';
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  client?: string;
+  expectedStart?: string;
+  expectedEnd?: string;
+  estimatedHours?: number;
+  color?: string;
+  manager?: { id: number; fullName: string } | null;
   team?: { id: number; name: string } | null;
   users: { id: number; fullName: string }[];
+  totalHours?: number;
+  activeHoursThisWeek?: number;
   createdAt: string;
 }
 

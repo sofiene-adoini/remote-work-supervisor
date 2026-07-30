@@ -15,6 +15,15 @@
       "required": true,
       "unique": true
     },
+    "description": {
+      "type": "text"
+    },
+    "leader": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "leaderOf"
+    },
     "users": {
       "type": "relation",
       "relation": "oneToMany",

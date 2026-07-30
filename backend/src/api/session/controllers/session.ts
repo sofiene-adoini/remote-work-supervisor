@@ -8,6 +8,7 @@ const SESSION_UID = 'api::session.session';
 const BREAK_UID = 'api::break.break';
 const USER_UID = 'plugin::users-permissions.user';
 const PROJECT_UID = 'api::project.project';
+const ALLOC_UID = 'api::project-time-allocation.project-time-allocation';
 
 // ── Continuous work protection ───────────────────────────────────────────
 
@@ -118,12 +119,12 @@ export async function emitSessionUpdate(userId: number) {
 
   let currentProject: { id: number; name: string } | null = null;
   try {
-    const projects = await strapi.db.query(PROJECT_UID).findMany({
-      where: { status: 'active', users: { id: uid } },
-      limit: 1,
+    const activeAlloc = await strapi.db.query(ALLOC_UID).findOne({
+      where: { user: uid, endTime: null },
+      populate: ['project'],
     });
-    if (projects.length > 0) {
-      currentProject = { id: projects[0].id, name: projects[0].name };
+    if (activeAlloc?.project) {
+      currentProject = { id: activeAlloc.project.id, name: activeAlloc.project.name };
     }
   } catch {}
 
@@ -217,11 +218,13 @@ export default {
 
     let currentProject: { id: number; name: string } | null = null;
     try {
-      const projects = await strapi.db.query(PROJECT_UID).findMany({
-        where: { status: 'active', users: { id: uid } },
-        limit: 1,
+      const activeAlloc = await strapi.db.query(ALLOC_UID).findOne({
+        where: { user: uid, endTime: null },
+        populate: ['project'],
       });
-      if (projects.length > 0) currentProject = { id: projects[0].id, name: projects[0].name };
+      if (activeAlloc?.project) {
+        currentProject = { id: activeAlloc.project.id, name: activeAlloc.project.name };
+      }
     } catch {}
 
     const [dailyStats, weeklyStats] = await Promise.all([
@@ -396,6 +399,23 @@ export default {
     OvertimeDetectionService.detectAfterClockOut(userId, updated.id).catch((err) =>
       strapi.log.error(`[Overtime] Detection failed: ${err.message}`),
     );
+
+    // Close active project allocation
+    try {
+      const activeAlloc = await strapi.db.query(ALLOC_UID).findOne({
+        where: { user: userId, endTime: null },
+      });
+      if (activeAlloc) {
+        const startMs = new Date(activeAlloc.startTime).getTime();
+        const minutes = Math.round((Date.now() - startMs) / 60000);
+        await strapi.db.query(ALLOC_UID).update({
+          where: { id: activeAlloc.id },
+          data: { endTime: new Date().toISOString(), durationMinutes: minutes },
+        });
+      }
+    } catch (err: any) {
+      strapi.log.error(`[Allocation] Failed to close allocation on clock-out: ${err.message}`);
+    }
 
     await emitSessionUpdate(userId);
 

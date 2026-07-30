@@ -27,6 +27,10 @@ export const HR_ROUTES: Routes = [
     loadComponent: () => import('./pages/hr-projects.component').then((m) => m.HrProjectsComponent),
   },
   {
+    path: 'projects/:projectId',
+    loadComponent: () => import('./pages/hr-project-detail/hr-project-detail.component').then((m) => m.HrProjectDetailComponent),
+  },
+  {
     path: 'overtime',
     loadComponent: () => import('./pages/hr-overtime.component').then((m) => m.HrOvertimeComponent),
   },

@@ -14,6 +14,12 @@ export class HrTeamsService {
     });
   }
 
+  getTeam(teamId: number): Observable<{ team: HrTeamDetail }> {
+    return this.http.get<{ team: HrTeamDetail }>(`${API_BASE_PATH}/teams/${teamId}`, {
+      withCredentials: true,
+    });
+  }
+
   getTeamMembers(teamId: number): Observable<{ members: HrTeamMember[] }> {
     return this.http.get<{ members: HrTeamMember[] }>(`${API_BASE_PATH}/teams/${teamId}/members`, {
       withCredentials: true,
@@ -32,7 +38,7 @@ export class HrTeamsService {
     });
   }
 
-  createTeam(payload: { name: string; memberIds?: number[] }): Observable<{ team: HrTeamDetail }> {
+  createTeam(payload: { name: string; description?: string; memberIds?: number[] }): Observable<{ team: HrTeamDetail }> {
     return this.http.post<{ team: HrTeamDetail }>(`${API_BASE_PATH}/teams`, payload, {
       withCredentials: true,
     });
@@ -42,5 +48,19 @@ export class HrTeamsService {
     return this.http.put<{ team: HrTeamDetail }>(`${API_BASE_PATH}/teams/${teamId}/members`, payload, {
       withCredentials: true,
     });
+  }
+
+  deleteTeam(teamId: number): Observable<{ ok: boolean }> {
+    return this.http.delete<{ ok: boolean }>(`${API_BASE_PATH}/teams/${teamId}`, {
+      withCredentials: true,
+    });
+  }
+
+  assignLeader(teamId: number, userId: number | null): Observable<{ leader: { id: number; fullName: string; email: string } | null }> {
+    return this.http.put<{ leader: { id: number; fullName: string; email: string } | null }>(
+      `${API_BASE_PATH}/teams/${teamId}/leader`,
+      { userId },
+      { withCredentials: true },
+    );
   }
 }

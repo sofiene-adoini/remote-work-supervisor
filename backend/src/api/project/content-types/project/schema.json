@@ -19,9 +19,31 @@
     },
     "status": {
       "type": "enumeration",
-      "enum": ["active", "archived"],
+      "enum": ["planning", "active", "on_hold", "completed", "cancelled", "archived"],
       "default": "active",
       "required": true
+    },
+    "priority": {
+      "type": "enumeration",
+      "enum": ["low", "medium", "high", "critical"],
+      "default": "medium"
+    },
+    "client": {
+      "type": "string"
+    },
+    "expectedStart": {
+      "type": "date"
+    },
+    "expectedEnd": {
+      "type": "date"
+    },
+    "estimatedHours": {
+      "type": "decimal",
+      "min": 0
+    },
+    "color": {
+      "type": "string",
+      "default": "#0b4a5a"
     },
     "team": {
       "type": "relation",
@@ -35,10 +57,22 @@
       "target": "plugin::users-permissions.user",
       "inversedBy": "projects"
     },
+    "manager": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "managedProjects"
+    },
     "timeEntries": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::time-entry.time-entry",
+      "mappedBy": "project"
+    },
+    "projectTimeAllocations": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project-time-allocation.project-time-allocation",
       "mappedBy": "project"
     }
   }

@@ -113,6 +113,27 @@ plugin.contentTypes.user.schema.attributes.agentDevices = {
   mappedBy: 'employee',
 };
 
+plugin.contentTypes.user.schema.attributes.projectTimeAllocations = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::project-time-allocation.project-time-allocation',
+  mappedBy: 'user',
+};
+
+plugin.contentTypes.user.schema.attributes.managedProjects = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::project.project',
+  mappedBy: 'manager',
+};
+
+plugin.contentTypes.user.schema.attributes.leaderOf = {
+  type: 'relation',
+  relation: 'oneToMany',
+  target: 'api::team.team',
+  mappedBy: 'leader',
+};
+
   plugin.policies.isHR = (policyContext) => {
     const roleName = policyContext.state?.user?.role?.name;
     return roleName === 'HR' || roleName === 'Admin';

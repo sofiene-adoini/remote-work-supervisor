@@ -5,6 +5,13 @@ import { createAndEmit } from '../../alert/services/notification.service';
 const OT_UID = 'api::overtime-declaration.overtime-declaration';
 const SESSION_UID = 'api::session.session';
 
+function getLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function getUserId(ot: any): number {
   return typeof ot.user === 'object' ? ot.user.id : ot.user;
 }
@@ -38,7 +45,10 @@ function emitOvertimeStatusChanged(ot: any) {
 export const OvertimeDetectionService = {
   async detectAfterClockOut(userId: number, sessionId: number) {
     const policy = await WorkPolicyService.get();
-    if (!policy.autoOvertimeEnabled) return null;
+    if (!policy.autoOvertimeEnabled) {
+      strapi.log.info(`[Overtime] Skipped — autoOvertimeEnabled is false for user=${userId}`);
+      return null;
+    }
 
     const now = new Date();
     const today = new Date();
@@ -50,7 +60,10 @@ export const OvertimeDetectionService = {
     const session = await strapi.db.query(SESSION_UID).findOne({
       where: { id: sessionId },
     });
-    if (!session || !session.clockOut) return null;
+    if (!session || !session.clockOut) {
+      strapi.log.info(`[Overtime] Skipped — session ${sessionId} not found or missing clockOut for user=${userId}`);
+      return null;
+    }
 
     const allTodaySessions = await strapi.db.query(SESSION_UID).findMany({
       where: {
@@ -65,18 +78,24 @@ export const OvertimeDetectionService = {
     }
 
     const expectedMinutes = policy.expectedDailyHours * 60;
-    const overtimeMinutes = totalWorkedMinutes - expectedMinutes;
+    const overtimeMinutes = Math.max(0, totalWorkedMinutes - expectedMinutes);
 
-    if (overtimeMinutes <= policy.minimumOvertimeThresholdMinutes) return null;
+    if (overtimeMinutes <= policy.minimumOvertimeThresholdMinutes) {
+      strapi.log.info(`[Overtime] Skipped — ${overtimeMinutes}min <= ${policy.minimumOvertimeThresholdMinutes}min threshold (totalWorked=${totalWorkedMinutes}, expected=${expectedMinutes}) for user=${userId}`);
+      return null;
+    }
 
     const existingToday = await strapi.db.query(OT_UID).findOne({
-      where: { user: userId, date: today.toISOString().slice(0, 10) },
+      where: { user: userId, date: getLocalDateString(today), status: { $ne: 'cancelled' } },
     });
-    if (existingToday) return existingToday;
+    if (existingToday) {
+      strapi.log.info(`[Overtime] Existing declaration id=${existingToday.id} found for user=${userId} date=${getLocalDateString(today)}`);
+      return existingToday;
+    }
 
     const ot = await strapi.db.query(OT_UID).create({
       data: {
-        date: today.toISOString().slice(0, 10),
+        date: getLocalDateString(today),
         workedMinutes: totalWorkedMinutes,
         expectedMinutes,
         overtimeMinutes,

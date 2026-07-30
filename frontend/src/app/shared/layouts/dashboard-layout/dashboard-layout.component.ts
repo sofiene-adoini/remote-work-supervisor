@@ -79,7 +79,6 @@ export class DashboardLayoutComponent implements OnInit {
   );
 
   protected readonly sidebarCollapsed = signal(false);
-  protected readonly notificationsOpen = signal(false);
   protected readonly userMenuOpen = signal(false);
   protected readonly currentTime = signal(new Date());
   protected readonly unreadAlertCount = signal(0);
@@ -161,10 +160,6 @@ export class DashboardLayoutComponent implements OnInit {
     if (this.isMobile()) {
       this.sidebarCollapsed.set(true);
     }
-  }
-
-  protected toggleNotifications(): void {
-    this.notificationsOpen.update((v) => !v);
   }
 
   protected toggleUserMenu(): void {
