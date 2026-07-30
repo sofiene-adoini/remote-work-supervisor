@@ -45,6 +45,9 @@ export class HrProjectsService {
     estimatedHours: number;
     color: string;
     managerId: number;
+    assignmentType: 'team' | 'individual';
+    teamId: number;
+    employeeIds: number[];
   }>): Observable<{ project: HrProject }> {
     return this.http.put<{ project: HrProject }>(`${API_BASE_PATH}/projects/${id}`, payload, { withCredentials: true });
   }

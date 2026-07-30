@@ -1096,6 +1096,11 @@ export interface ApiTeamTeam extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    description: Schema.Attribute.Text;
+    leader: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::team.team'> &
       Schema.Attribute.Private;
@@ -1634,6 +1639,7 @@ export interface PluginUsersPermissionsUser
       }>;
     fullName: Schema.Attribute.String & Schema.Attribute.Required;
     isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    leaderOf: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',

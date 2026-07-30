@@ -224,8 +224,7 @@ type DialogMode = 'create' | 'edit' | 'reassign' | null;
 
             }
 
-            <!-- Assignment (create / reassign) -->
-            @if (dialogMode() !== 'edit') {
+            <!-- Assignment -->
               <div class="form-group">
                 <label class="form-label">Assignment Type</label>
                 <div class="segmented-control">
@@ -268,8 +267,6 @@ type DialogMode = 'create' | 'edit' | 'reassign' | null;
                   }
                 </div>
               }
-            }
-
             @if (error()) {
               <p class="form-error">{{ error() }}</p>
             }
@@ -648,6 +645,9 @@ export class HrProjectsComponent implements OnInit {
     this.projExpectedEnd = project.expectedEnd || '';
     this.projEstimatedHours = project.estimatedHours || null;
     this.projColor = project.color || '#0b4a5a';
+    this.assignmentType = project.team ? 'team' : 'individual';
+    this.selectedTeamId = project.team?.id ?? null;
+    this.selectedEmpIds.set(new Set(project.users.map((u) => u.id)));
     this.error.set('');
     this.dialogMode.set('edit');
     this.loadDialogData();
@@ -711,15 +711,13 @@ export class HrProjectsComponent implements OnInit {
   submitProject(): void {
     this.error.set('');
 
-    if (this.dialogMode() === 'create' || this.dialogMode() === 'reassign') {
-      if (this.assignmentType === 'team' && !this.selectedTeamId) {
-        this.error.set('Please select a team');
-        return;
-      }
-      if (this.assignmentType === 'individual' && this.selectedEmpIds().size === 0) {
-        this.error.set('Select at least one employee');
-        return;
-      }
+    if (this.assignmentType === 'team' && !this.selectedTeamId) {
+      this.error.set('Please select a team');
+      return;
+    }
+    if (this.assignmentType === 'individual' && this.selectedEmpIds().size === 0) {
+      this.error.set('Select at least one employee');
+      return;
     }
 
     if (this.dialogMode() === 'create' && !this.projName.trim()) {
@@ -743,6 +741,9 @@ export class HrProjectsComponent implements OnInit {
         expectedEnd: this.projExpectedEnd || undefined,
         estimatedHours: this.projEstimatedHours ?? undefined,
         color: this.projColor,
+        assignmentType: this.assignmentType,
+        ...(this.assignmentType === 'team' ? { teamId: this.selectedTeamId! } : {}),
+        ...(this.assignmentType === 'individual' ? { employeeIds: empIds } : {}),
       }).subscribe({
         next: () => {
           this.submitting.set(false);

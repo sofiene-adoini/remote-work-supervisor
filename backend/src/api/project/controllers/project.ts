@@ -68,12 +68,29 @@ export default {
       },
     });
 
-    const result = await strapi.db.query(PROJECT_UID).findOne({
+    const created = await strapi.db.query(PROJECT_UID).findOne({
       where: { id: project.id },
       populate: ['team', 'users', 'manager'],
     });
 
-    return ctx.send({ project: result });
+    return ctx.send({
+      project: {
+        id: created.id,
+        name: created.name,
+        description: created.description,
+        status: created.status,
+        priority: created.priority,
+        client: created.client,
+        expectedStart: created.expectedStart,
+        expectedEnd: created.expectedEnd,
+        estimatedHours: created.estimatedHours,
+        color: created.color,
+        team: created.team ? { id: created.team.id, name: created.team.name } : null,
+        users: (created.users ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
+        manager: created.manager ? { id: created.manager.id, fullName: created.manager.fullName } : null,
+        createdAt: created.createdAt,
+      },
+    });
   },
 
   async update(ctx: Context) {
@@ -91,17 +108,56 @@ export default {
       if (body[field] !== undefined) updates[field] = body[field];
     }
 
+    if (body.assignmentType) {
+      const { assignmentType, teamId, employeeIds } = body;
+      if (assignmentType === 'team') {
+        if (!teamId) return ctx.badRequest('teamId is required for team assignment');
+        const team = await strapi.db.query(TEAM_UID).findOne({
+          where: { id: teamId },
+          populate: ['users'],
+        });
+        if (!team) return ctx.notFound('Team not found');
+        updates.team = team.id;
+        updates.users = (team.users ?? []).map((u: any) => u.id);
+      } else if (assignmentType === 'individual') {
+        if (!employeeIds?.length) return ctx.badRequest('employeeIds is required for individual assignment');
+        for (const eid of employeeIds) {
+          const user = await strapi.db.query(USER_UID).findOne({ where: { id: eid } });
+          if (!user) return ctx.badRequest(`User ${eid} not found`);
+        }
+        updates.team = null;
+        updates.users = employeeIds;
+      }
+    }
+
     await strapi.db.query(PROJECT_UID).update({
       where: { id: project.id },
       data: updates,
     });
 
-    const result = await strapi.db.query(PROJECT_UID).findOne({
+    const updated = await strapi.db.query(PROJECT_UID).findOne({
       where: { id: project.id },
       populate: ['team', 'users', 'manager'],
     });
 
-    return ctx.send({ project: result });
+    return ctx.send({
+      project: {
+        id: updated.id,
+        name: updated.name,
+        description: updated.description,
+        status: updated.status,
+        priority: updated.priority,
+        client: updated.client,
+        expectedStart: updated.expectedStart,
+        expectedEnd: updated.expectedEnd,
+        estimatedHours: updated.estimatedHours,
+        color: updated.color,
+        team: updated.team ? { id: updated.team.id, name: updated.team.name } : null,
+        users: (updated.users ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
+        manager: updated.manager ? { id: updated.manager.id, fullName: updated.manager.fullName } : null,
+        createdAt: updated.createdAt,
+      },
+    });
   },
 
   async getById(ctx: Context) {
@@ -109,14 +165,17 @@ export default {
 
     const project = await strapi.db.query(PROJECT_UID).findOne({
       where: { id: parseInt(id, 10) },
-      populate: ['team', 'users', 'manager'],
+      populate: ['team', 'manager'],
     });
     if (!project) return ctx.notFound('Project not found');
+
+    const projectUsers = await strapi.db.query(USER_UID).findMany({
+      where: { projects: { id: project.id } },
+    });
 
     const totalMinutes = await computeTotalAllocationMinutes(project.id);
     const activeMinutes = await computeActiveAllocationMinutes(project.id);
 
-    // Get per-user allocations
     const allocs = await strapi.db.query(ALLOC_UID).findMany({
       where: { project: project.id },
       populate: ['user'],
@@ -151,7 +210,7 @@ export default {
         totalHours: Math.round((totalMinutes / 60) * 10) / 10,
         activeHoursThisWeek: Math.round((activeMinutes / 60) * 10) / 10,
         team: project.team ? { id: project.team.id, name: project.team.name } : null,
-        users: (project.users ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
+        users: (projectUsers ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
         manager: project.manager ? { id: project.manager.id, fullName: project.manager.fullName } : null,
         employees,
         createdAt: project.createdAt,
@@ -205,24 +264,43 @@ export default {
       },
     });
 
-    const result = await strapi.db.query(PROJECT_UID).findOne({
+    const reassigned = await strapi.db.query(PROJECT_UID).findOne({
       where: { id: project.id },
       populate: ['team', 'users'],
     });
 
-    return ctx.send({ project: result });
+    return ctx.send({
+      project: {
+        id: reassigned.id,
+        name: reassigned.name,
+        description: reassigned.description,
+        status: reassigned.status,
+        priority: reassigned.priority,
+        client: reassigned.client,
+        expectedStart: reassigned.expectedStart,
+        expectedEnd: reassigned.expectedEnd,
+        estimatedHours: reassigned.estimatedHours,
+        color: reassigned.color,
+        team: reassigned.team ? { id: reassigned.team.id, name: reassigned.team.name } : null,
+        users: (reassigned.users ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
+        createdAt: reassigned.createdAt,
+      },
+    });
   },
 
   async listAll(ctx: Context) {
     const projects = await strapi.db.query(PROJECT_UID).findMany({
       orderBy: { name: 'asc' },
-      populate: ['team', 'users', 'manager'],
+      populate: ['team', 'manager'],
     });
 
     const result = await Promise.all(
       projects.map(async (p) => {
         const totalMinutes = await computeTotalAllocationMinutes(p.id);
         const activeMinutes = await computeActiveAllocationMinutes(p.id);
+        const projectUsers = await strapi.db.query(USER_UID).findMany({
+          where: { projects: { id: p.id } },
+        });
         return {
           id: p.id,
           name: p.name,
@@ -237,7 +315,7 @@ export default {
           totalHours: Math.round((totalMinutes / 60) * 10) / 10,
           activeHoursThisWeek: Math.round((activeMinutes / 60) * 10) / 10,
           team: p.team ? { id: p.team.id, name: p.team.name } : null,
-          users: (p.users ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
+          users: (projectUsers ?? []).map((u: any) => ({ id: u.id, fullName: u.fullName })),
           manager: p.manager ? { id: p.manager.id, fullName: p.manager.fullName } : null,
           createdAt: p.createdAt,
         };

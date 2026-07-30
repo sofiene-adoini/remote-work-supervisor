@@ -105,29 +105,41 @@ import { HrProject } from '../../models/hr.models';
           }
         </div>
 
-        <!-- Team Info -->
+        <!-- Team & Users -->
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Assignment</h3>
+            <h3 class="card-title">Assigned Members</h3>
           </div>
-          <div class="assign-info">
-            @if (p.team) {
-              <div class="assign-row">
-                <span class="assign-label">Team</span>
-                <span class="assign-value">{{ p.team.name }}</span>
-              </div>
-            }
-            @if (p.manager) {
-              <div class="assign-row">
-                <span class="assign-label">Manager</span>
-                <span class="assign-value">{{ p.manager.fullName }}</span>
-              </div>
-            }
-            <div class="assign-row">
-              <span class="assign-label">Assigned Users</span>
-              <span class="assign-value">{{ p.users.length }}</span>
+          @if (p.team) {
+            <div class="assign-team-badge">
+              <svg lucideFolderOpen class="icon-sm"></svg>
+              <span>{{ p.team.name }}</span>
             </div>
-          </div>
+          }
+          @if (p.users?.length) {
+            <div class="user-list">
+              @for (u of p.users; track u.id) {
+                <div class="user-row">
+                  <div class="user-avatar">{{ u.fullName.charAt(0) }}</div>
+                  <span class="user-name">{{ u.fullName }}</span>
+                </div>
+              }
+            </div>
+          } @else if (p.employees?.length) {
+            <div class="user-list">
+              @for (emp of p.employees; track emp.userId) {
+                <div class="user-row">
+                  <div class="user-avatar">{{ emp.fullName.charAt(0) }}</div>
+                  <span class="user-name">{{ emp.fullName }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty">
+              <svg lucideUsers class="empty-icon"></svg>
+              <p class="empty-text">No employees assigned</p>
+            </div>
+          }
         </div>
       }
     </div>
@@ -237,11 +249,22 @@ import { HrProject } from '../../models/hr.models';
     .contrib-bar-fill { height: 100%; border-radius: 3px; background: var(--rws-accent); transition: width 300ms ease; }
     .contrib-hours { font-size: 0.8125rem; font-weight: 600; color: var(--rws-text); font-family: var(--rws-font-mono); text-align: right; }
 
-    /* ── Assignment Info ─────────────────────────────────── */
-    .assign-info { display: flex; flex-direction: column; gap: 0.75rem; }
-    .assign-row { display: flex; align-items: center; justify-content: space-between; }
-    .assign-label { font-size: 0.8125rem; color: var(--rws-text-muted); }
-    .assign-value { font-size: 0.875rem; font-weight: 600; color: var(--rws-text); }
+    /* ── Assigned Members ────────────────────────────────── */
+    .assign-team-badge {
+      display: inline-flex; align-items: center; gap: 0.375rem;
+      padding: 0.375rem 0.75rem; border-radius: 999px;
+      background: var(--rws-bg); font-size: 0.8125rem; font-weight: 600;
+      color: var(--rws-accent-strong); margin-bottom: 1rem;
+    }
+    .user-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .user-row { display: flex; align-items: center; gap: 0.75rem; }
+    .user-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--rws-primary), var(--rws-accent));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6875rem; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .user-name { font-size: 0.875rem; font-weight: 500; color: var(--rws-text); }
 
     .empty { display: flex; flex-direction: column; align-items: center; padding: 2rem 0; text-align: center; }
     .empty-icon { width: 32px; height: 32px; color: var(--rws-text-muted); opacity: 0.4; margin-bottom: 0.5rem; }
