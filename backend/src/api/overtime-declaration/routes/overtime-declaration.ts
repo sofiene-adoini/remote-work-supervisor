@@ -11,6 +11,15 @@ export default {
     },
     {
       method: 'GET',
+      path: '/overtime-declarations/my/recent',
+      handler: 'overtime-declaration.recentDecisions',
+      config: {
+        auth: { scope: ['api::overtime-declaration.overtime-declaration.myDeclarations'] },
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
       path: '/overtime-declarations/pending',
       handler: 'overtime-declaration.pending',
       config: {
@@ -22,6 +31,15 @@ export default {
       method: 'GET',
       path: '/overtime-declarations/all',
       handler: 'overtime-declaration.allDeclarations',
+      config: {
+        auth: { scope: ['api::overtime-declaration.overtime-declaration.allDeclarations'] },
+        policies: [],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/overtime-declarations/hr/stats',
+      handler: 'overtime-declaration.hrStats',
       config: {
         auth: { scope: ['api::overtime-declaration.overtime-declaration.allDeclarations'] },
         policies: [],

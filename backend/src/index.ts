@@ -2,6 +2,7 @@ import type { Core } from '@strapi/strapi';
 import { Server, Socket } from 'socket.io';
 import { createAndEmit } from './api/alert/services/notification.service';
 import { emitSessionUpdate, startContinuousWorkCheck } from './api/session/controllers/session';
+import { OvertimeDetectionService } from './api/overtime-declaration/services/overtime-detection.service';
 
 const USER_UID = 'plugin::users-permissions.user';
 const OFFLINE_GRACE_MS = 15_000;
@@ -140,6 +141,10 @@ export default {
                   },
                 });
                 strapi.log.info(`[Realtime Agent] Auto clock-out for employee ${uid} (agent offline)`);
+
+                OvertimeDetectionService.detectAfterClockOut(uid, activeSession.id).catch((err: any) =>
+                  strapi.log.error(`[Overtime] Auto-detection after auto clock-out failed: ${err.message}`),
+                );
               }
             } catch (err: any) {
               strapi.log.error(`[Realtime Agent] Auto clock-out failed for employee ${uid}: ${err.message}`);

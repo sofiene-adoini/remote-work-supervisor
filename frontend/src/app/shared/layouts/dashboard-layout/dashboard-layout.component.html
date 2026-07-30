@@ -79,11 +79,6 @@
           </div>
         }
 
-        <button class="topbar-btn" type="button" (click)="toggleNotifications()" aria-label="Notifications">
-          <svg lucideBell class="icon-md" aria-hidden="true"></svg>
-          <span class="badge-dot"></span>
-        </button>
-
         <div class="user-menu-wrapper">
           <button class="user-trigger" type="button" (click)="toggleUserMenu()" (blur)="closeUserMenu()" aria-label="User menu">
             <div class="avatar">
@@ -124,23 +119,4 @@
     </main>
   </div>
 
-  <!-- Notification panel -->
-  @if (notificationsOpen()) {
-    <div class="notif-overlay" (click)="toggleNotifications()"></div>
-    <aside class="notif-panel">
-      <div class="notif-header">
-        <h2 class="notif-title">Notifications</h2>
-        <button class="topbar-btn" type="button" (click)="toggleNotifications()" aria-label="Close">
-          <svg lucideX class="icon-md" aria-hidden="true"></svg>
-        </button>
-      </div>
-      <div class="notif-body">
-        <div class="notif-empty">
-          <svg lucideBell class="notif-empty-icon" aria-hidden="true"></svg>
-          <p class="notif-empty-text">No notifications yet</p>
-          <p class="notif-empty-sub">You're all caught up!</p>
-        </div>
-      </div>
-    </aside>
-  }
 </div>
