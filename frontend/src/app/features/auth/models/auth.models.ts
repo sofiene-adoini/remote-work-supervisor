@@ -28,4 +28,13 @@ export interface InviteRequest {
   fullName: string;
   roleId: number;
   teamId?: number | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  employeeId?: string | null;
+  startDate?: string | null;
+  expectedDailyHours?: number | null;
+  agentRequired?: boolean;
+  employmentStatus?: string;
+  password?: string;
+  sendWelcomeEmail?: boolean;
 }

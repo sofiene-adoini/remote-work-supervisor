@@ -1,10 +1,57 @@
 import type { Context } from 'koa';
+import crypto from 'node:crypto';
 import { WorkPolicyService } from '../../company-work-policy/services/work-policy.service';
+import { buildResetPasswordEmail } from '../../../utils/email-templates';
 
 const SESSION_UID = 'api::session.session';
 const USER_UID = 'plugin::users-permissions.user';
 const ALERT_UID = 'api::alert.alert';
 const SCREENSHOT_UID = 'api::screenshot-analysis.screenshot-analysis';
+const TEAM_UID = 'api::team.team';
+const DEVICE_UID = 'api::agent-device.agent-device';
+const ROLE_UID = 'plugin::users-permissions.role';
+
+function sanitizeUserProfile(user: any) {
+  const devices = (user.agentDevices ?? [])
+    .filter((d: any) => d.active && !d.revoked)
+    .sort((a: any, b: any) => {
+      const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+      const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+      return bt - at;
+    });
+  const latestDevice = devices[0] ?? null;
+
+  return {
+    id: user.id,
+    fullName: user.fullName,
+    email: user.email,
+    employeeId: user.employeeId ?? null,
+    phone: user.phone ?? null,
+    jobTitle: user.jobTitle ?? null,
+    role: user.role ? { id: user.role.id, name: user.role.name, type: user.role.type } : null,
+    roleName: user.role?.name ?? 'Employee',
+    employmentStatus: user.employmentStatus ?? 'active',
+    startDate: user.startDate ?? null,
+    expectedDailyHours: user.expectedDailyHours ?? null,
+    agentRequired: user.agentRequired ?? true,
+    isActive: user.isActive ?? true,
+    memberSince: user.createdAt ?? null,
+    team: user.team ? { id: user.team.id, name: user.team.name } : null,
+    projects: (user.projects ?? []).map((p: any) => ({ id: p.id, name: p.name })),
+    agentDevice: latestDevice
+      ? {
+          id: latestDevice.id,
+          deviceId: latestDevice.deviceId,
+          deviceName: latestDevice.deviceName,
+          operatingSystem: latestDevice.operatingSystem,
+          agentVersion: latestDevice.agentVersion,
+          lastSeenAt: latestDevice.lastSeenAt ?? null,
+          pairedAt: latestDevice.pairedAt ?? null,
+        }
+      : null,
+    lastSeenAt: latestDevice?.lastSeenAt ?? null,
+  };
+}
 
 function parseDateRange(startDate?: string, endDate?: string): { start: Date; end: Date } {
   const end = endDate ? new Date(endDate) : new Date();
@@ -42,7 +89,7 @@ export default {
     const policy = await WorkPolicyService.get();
 
     const employees = await strapi.db.query(USER_UID).findMany({
-      where: { role: { name: 'Employee' } },
+      where: { role: { name: 'Employee' }, deletedAt: null },
     });
 
     const sessions = await strapi.db.query(SESSION_UID).findMany({
@@ -125,7 +172,8 @@ export default {
 
     const {
       startDate, endDate, page = '1', pageSize = '20',
-      search, status, attendance, teamId,
+      search, status, attendance, teamId, roleId, projectId,
+      employment, agentStatus, joinedFrom, joinedTo, includeDeleted,
       sortBy = 'fullName', sortDir = 'asc',
     } = ctx.query as Record<string, string>;
 
@@ -135,17 +183,39 @@ export default {
     const ps = Math.min(100, Math.max(1, parseInt(pageSize, 10)));
 
     const where: any = { role: { name: 'Employee' } };
+    if (includeDeleted !== 'true') {
+      where.deletedAt = null;
+    }
     if (search) {
       where.$or = [
         { fullName: { $containsi: search } },
         { email: { $containsi: search } },
+        { employeeId: { $containsi: search } },
       ];
     }
     if (teamId) {
       where.team = { id: parseInt(teamId, 10) };
     }
+    if (roleId) {
+      where.role = { id: parseInt(roleId, 10) };
+    }
+    if (projectId) {
+      where.projects = { id: parseInt(projectId, 10) };
+    }
+    if (joinedFrom || joinedTo) {
+      where.createdAt = {};
+      if (joinedFrom) where.createdAt.$gte = new Date(joinedFrom).toISOString();
+      if (joinedTo) {
+        const joinedEnd = new Date(joinedTo);
+        joinedEnd.setHours(23, 59, 59, 999);
+        where.createdAt.$lte = joinedEnd.toISOString();
+      }
+    }
 
-    const allEmployees = await strapi.db.query(USER_UID).findMany({ where, populate: ['team'] });
+    const allEmployees = await strapi.db.query(USER_UID).findMany({
+      where,
+      populate: ['team', 'role', 'projects', 'agentDevices'],
+    });
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -221,11 +291,30 @@ export default {
         ? (latestSession.clockOut || latestSession.clockIn)
         : null;
 
+      const activeDevices = (emp.agentDevices ?? [])
+        .filter((d: any) => d.active && !d.revoked)
+        .sort((a: any, b: any) => {
+          const at = a.lastSeenAt ? new Date(a.lastSeenAt).getTime() : 0;
+          const bt = b.lastSeenAt ? new Date(b.lastSeenAt).getTime() : 0;
+          return bt - at;
+        });
+      const latestDevice = activeDevices[0] ?? null;
+
       return {
         userId: emp.id,
         fullName: emp.fullName,
         email: emp.email,
+        employeeId: emp.employeeId ?? null,
+        phone: emp.phone ?? null,
+        jobTitle: emp.jobTitle ?? null,
+        roleName: emp.role?.name ?? 'Employee',
+        employmentStatus: emp.employmentStatus ?? 'active',
+        startDate: emp.startDate ?? null,
+        expectedDailyHours: emp.expectedDailyHours ?? null,
+        agentRequired: emp.agentRequired ?? true,
+        memberSince: emp.createdAt ?? null,
         team: emp.team ? { id: emp.team.id, name: emp.team.name } : null,
+        projects: (emp.projects ?? []).map((p: any) => ({ id: p.id, name: p.name })),
         workedHours: Math.round((totalWorked / 60) * 10) / 10,
         expectedHours: Math.round((expectedMin / 60) * 10) / 10,
         missingHours: Math.round((missingMin / 60) * 10) / 10,
@@ -236,6 +325,18 @@ export default {
         currentStatus,
         agentOnline,
         lastActivity,
+        lastSeenAt: latestDevice?.lastSeenAt ?? null,
+        agentDevice: latestDevice
+          ? {
+              id: latestDevice.id,
+              deviceId: latestDevice.deviceId,
+              deviceName: latestDevice.deviceName,
+              operatingSystem: latestDevice.operatingSystem,
+              agentVersion: latestDevice.agentVersion,
+              lastSeenAt: latestDevice.lastSeenAt ?? null,
+              pairedAt: latestDevice.pairedAt ?? null,
+            }
+          : null,
         breakViolations,
         daysPresent,
         longestDayHours: Math.round((longestDayMin / 60) * 10) / 10,
@@ -250,13 +351,37 @@ export default {
     if (attendance) {
       filtered = filtered.filter((e) => e.evaluation === attendance);
     }
+    if (employment) {
+      filtered = filtered.filter((e) => e.employmentStatus === employment);
+    }
+    if (agentStatus) {
+      if (agentStatus === 'online') filtered = filtered.filter((e) => e.agentOnline);
+      else if (agentStatus === 'offline') filtered = filtered.filter((e) => !e.agentOnline);
+      else if (agentStatus === 'no_agent') filtered = filtered.filter((e) => !e.agentDevice);
+    }
+
+    const summary = {
+      total: enriched.length,
+      activeNow: enriched.filter((e) => e.currentStatus === 'active').length,
+      onBreak: enriched.filter((e) => e.currentStatus === 'break').length,
+      clockedOut: enriched.filter((e) => e.currentStatus === 'clocked_out').length,
+      agentOnline: enriched.filter((e) => e.agentOnline).length,
+      suspended: enriched.filter((e) => e.employmentStatus === 'suspended').length,
+      terminated: enriched.filter((e) => e.employmentStatus === 'terminated').length,
+    };
 
     const sortField = sortBy === 'name' ? 'fullName' : sortBy;
     filtered.sort((a: any, b: any) => {
-      const av = a[sortField] ?? 0;
-      const bv = b[sortField] ?? 0;
-      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-      return sortDir === 'asc' ? av - bv : bv - av;
+      const getVal = (e: any): string | number => {
+        if (sortField === 'team') return e.team?.name ?? '';
+        if (sortField === 'lastSeenAt') return e.lastSeenAt ? new Date(e.lastSeenAt).getTime() : 0;
+        const v = e[sortField] ?? 0;
+        return v;
+      };
+      const av = getVal(a);
+      const bv = getVal(b);
+      if (typeof av === 'string') return sortDir === 'asc' ? av.localeCompare(bv as string) : (bv as string).localeCompare(av);
+      return sortDir === 'asc' ? (av as number) - (bv as number) : (bv as number) - (av as number);
     });
 
     const total = filtered.length;
@@ -265,6 +390,7 @@ export default {
     return ctx.send({
       employees: paged,
       pagination: { page: pg, pageSize: ps, total, totalPages: Math.ceil(total / ps) },
+      summary,
     });
   },
 
@@ -279,7 +405,7 @@ export default {
 
     const user = await strapi.db.query(USER_UID).findOne({
       where: { id: parseInt(id, 10) },
-      populate: ['team'],
+      populate: ['team', 'role', 'projects', 'agentDevices'],
     });
     if (!user) return ctx.notFound('Employee not found');
 
@@ -352,12 +478,12 @@ export default {
     const daysPresent = byDay.size;
     const avgDailyMin = daysPresent > 0 ? totalWorked / daysPresent : 0;
 
+    const agentSockets = (strapi as any).agentSockets as Map<number, any> | undefined;
+
     return ctx.send({
       employee: {
-        id: user.id,
-        fullName: user.fullName,
-        email: user.email,
-        team: user.team ? { id: user.team.id, name: user.team.name } : null,
+        ...sanitizeUserProfile(user),
+        agentOnline: agentSockets ? agentSockets.has(Number(user.id)) : false,
       },
       summary: {
         workedHours: Math.round((totalWorked / 60) * 10) / 10,
@@ -616,6 +742,288 @@ export default {
     ctx.set('Content-Type', 'text/csv');
     ctx.set('Content-Disposition', `attachment; filename="hr-analytics-${new Date().toISOString().split('T')[0]}.csv"`);
     return ctx.send(rows.join('\n'));
+  },
+
+  async roles(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const isAdmin = roleName === 'Admin';
+    const allRoles = await strapi.db.query(ROLE_UID).findMany();
+    const roles = allRoles
+      .filter((r: any) => ['employee', 'hr', 'admin'].includes(r.type) && (isAdmin || r.type !== 'admin'))
+      .map((r: any) => ({ id: r.id, name: r.name, type: r.type }));
+
+    return ctx.send({ roles });
+  },
+
+  async updateEmployee(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const body = ctx.request.body ?? {};
+
+    const user = await strapi.db.query(USER_UID).findOne({
+      where: { id: parseInt(id, 10) },
+      populate: ['team', 'role'],
+    });
+    if (!user) return ctx.notFound('Employee not found');
+
+    const updates: Record<string, any> = {};
+
+    if (body.fullName !== undefined) {
+      if (typeof body.fullName !== 'string' || !body.fullName.trim()) {
+        return ctx.badRequest('fullName is required');
+      }
+      updates.fullName = body.fullName.trim();
+    }
+
+    if (body.email !== undefined) {
+      const email = String(body.email).toLowerCase().trim();
+      if (!email || !/.+@.+\..+/.test(email)) return ctx.badRequest('A valid email is required.');
+      if (email !== user.email) {
+        const existing = await strapi.db.query(USER_UID).findOne({ where: { email, deletedAt: null } });
+        if (existing) return ctx.conflict('A user with that email already exists.');
+      }
+      updates.email = email;
+      updates.username = email;
+    }
+
+    if (body.employeeId !== undefined) {
+      const empId = body.employeeId ? String(body.employeeId).trim() : null;
+      if (empId) {
+        const collision = await strapi.db.query(USER_UID).findOne({
+          where: { employeeId: empId, deletedAt: null, id: { $ne: parseInt(id, 10) } },
+        });
+        if (collision) return ctx.conflict('That employee ID is already assigned.');
+      }
+      updates.employeeId = empId;
+    }
+
+    if (body.phone !== undefined) updates.phone = body.phone?.trim() || null;
+    if (body.jobTitle !== undefined) updates.jobTitle = body.jobTitle?.trim() || null;
+
+    if (body.teamId !== undefined) {
+      const teamId = body.teamId ?? null;
+      if (teamId) {
+        const team = await strapi.db.query(TEAM_UID).findOne({ where: { id: teamId } });
+        if (!team) return ctx.badRequest('The specified team does not exist.');
+      }
+      updates.team = teamId;
+    }
+
+    if (body.roleId !== undefined) {
+      const targetRole = await strapi.db.query(ROLE_UID).findOne({ where: { id: body.roleId } });
+      if (!targetRole) return ctx.badRequest('The specified role does not exist.');
+      if (targetRole.type === 'super-admin') {
+        return ctx.forbidden('Assigning a super-admin role is not permitted.');
+      }
+      const inviterIsAdmin = roleName === 'Admin';
+      const allowed = inviterIsAdmin
+        ? ['employee', 'hr', 'admin'].includes(targetRole.type)
+        : ['employee', 'hr'].includes(targetRole.type);
+      if (!allowed) {
+        return ctx.forbidden(
+          inviterIsAdmin
+            ? 'Admin can only assign Employee, HR, or Admin roles.'
+            : 'HR can only assign Employee or HR roles.',
+        );
+      }
+      updates.role = targetRole.id;
+    }
+
+    if (body.employmentStatus !== undefined) {
+      const s = body.employmentStatus;
+      if (!['active', 'suspended', 'terminated'].includes(s)) {
+        return ctx.badRequest('Invalid employment status.');
+      }
+      updates.employmentStatus = s;
+      updates.isActive = s === 'active';
+    }
+
+    if (body.startDate !== undefined) updates.startDate = body.startDate || null;
+    if (body.expectedDailyHours !== undefined) {
+      updates.expectedDailyHours = body.expectedDailyHours != null && Number(body.expectedDailyHours) > 0
+        ? Number(body.expectedDailyHours)
+        : null;
+    }
+    if (body.agentRequired !== undefined) updates.agentRequired = !!body.agentRequired;
+
+    await strapi.db.query(USER_UID).update({ where: { id: user.id }, data: updates });
+
+    const updated = await strapi.db.query(USER_UID).findOne({
+      where: { id: user.id },
+      populate: ['team', 'role', 'projects', 'agentDevices'],
+    });
+
+    return ctx.send({ user: sanitizeUserProfile(updated) });
+  },
+
+  async suspendEmployee(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const user = await strapi.db.query(USER_UID).findOne({ where: { id: parseInt(id, 10) } });
+    if (!user) return ctx.notFound('Employee not found');
+    if (user.role?.name === 'Admin' && roleName === 'HR') return ctx.forbidden('HR cannot suspend an Admin account.');
+
+    await strapi.db.query(USER_UID).update({
+      where: { id: user.id },
+      data: { isActive: false, employmentStatus: 'suspended' },
+    });
+    return ctx.send({ ok: true });
+  },
+
+  async reactivateEmployee(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const user = await strapi.db.query(USER_UID).findOne({ where: { id: parseInt(id, 10) } });
+    if (!user) return ctx.notFound('Employee not found');
+
+    await strapi.db.query(USER_UID).update({
+      where: { id: user.id },
+      data: { isActive: true, employmentStatus: 'active' },
+    });
+    return ctx.send({ ok: true });
+  },
+
+  async softDeleteEmployee(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const user = await strapi.db.query(USER_UID).findOne({
+      where: { id: parseInt(id, 10) },
+      populate: ['role'],
+    });
+    if (!user) return ctx.notFound('Employee not found');
+    if (user.role?.name === 'Admin' && roleName === 'HR') return ctx.forbidden('HR cannot delete an Admin account.');
+
+    await strapi.db.query(USER_UID).update({
+      where: { id: user.id },
+      data: {
+        deletedAt: new Date().toISOString(),
+        isActive: false,
+        employmentStatus: 'terminated',
+      },
+    });
+    return ctx.send({ ok: true });
+  },
+
+  async restoreEmployee(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const user = await strapi.db.query(USER_UID).findOne({ where: { id: parseInt(id, 10) } });
+    if (!user) return ctx.notFound('Employee not found');
+
+    await strapi.db.query(USER_UID).update({
+      where: { id: user.id },
+      data: { deletedAt: null, isActive: true, employmentStatus: 'active' },
+    });
+    return ctx.send({ ok: true });
+  },
+
+  async resetPassword(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const user = await strapi.db.query(USER_UID).findOne({ where: { id: parseInt(id, 10) } });
+    if (!user) return ctx.notFound('Employee not found');
+
+    const resetPasswordToken = crypto.randomBytes(32).toString('hex');
+    await strapi.db.query(USER_UID).update({
+      where: { id: user.id },
+      data: { resetPasswordToken },
+    });
+
+    const devices = await strapi.db.query(DEVICE_UID).findMany({
+      where: { employee: user.id, active: true },
+    });
+    const revokedAt = new Date().toISOString();
+    for (const d of devices) {
+      await strapi.db.query(DEVICE_UID).update({
+        where: { id: d.id },
+        data: { active: false, revoked: true, revokedAt, revokedBy: `hr-reset:${ctx.state.user.id}` },
+      });
+    }
+    if (devices.length > 0) {
+      strapi.log.info(`[HR] Revoked ${devices.length} trusted device(s) for user ${user.id} (password reset by HR)`);
+    }
+
+    const frontendUrl = (process.env.CORS_ORIGIN || 'http://localhost:4200').split(',')[0].trim();
+    const resetUrl = `${frontendUrl}/reset-password?code=${resetPasswordToken}`;
+    try {
+      await strapi.plugin('email').service('email').send({
+        to: user.email,
+        from: process.env.SMTP_FROM || 'noreply@assas.app',
+        subject: 'Your Assas password was reset',
+        text: `Your administrator reset your password. Click the link to set a new one: ${resetUrl}`,
+        html: buildResetPasswordEmail({
+          resetUrl,
+          intro:
+            'Your administrator reset your Assas password as a security measure. Click the button below to choose a new password.',
+          note:
+            'This reset was initiated by an administrator in your organization. If you have any questions, contact your administrator.',
+        }),
+      });
+      strapi.log.info(`[HR] Reset password email sent to ${user.email}`);
+    } catch (err: any) {
+      strapi.log.warn(`[HR] Failed to send reset email to ${user.email}: ${err.message}`);
+      strapi.log.info(`[HR] Reset link for ${user.email}: ${resetUrl}`);
+    }
+
+    return ctx.send({ ok: true, inviteToken: resetPasswordToken });
+  },
+
+  async employeeSessions(ctx: Context) {
+    const roleName = ctx.state.user?.role?.name;
+    if (roleName !== 'HR' && roleName !== 'Admin') return ctx.forbidden('HR or Admin role required');
+
+    const { id } = ctx.params;
+    const { start, end } = ctx.query as { start?: string; end?: string };
+    if (!start || !end) return ctx.badRequest('start and end query params required (YYYY-MM-DD)');
+
+    const startDate = new Date(start);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
+
+    const sessions = await strapi.db.query(SESSION_UID).findMany({
+      where: {
+        user: parseInt(id, 10),
+        clockIn: { $gte: startDate.toISOString(), $lte: endDate.toISOString() },
+      },
+      orderBy: { clockIn: 'asc' },
+      populate: ['breaks'],
+    });
+
+    const enriched = sessions.map((s: any) => ({
+      id: s.id,
+      clockIn: s.clockIn,
+      clockOut: s.clockOut,
+      breakStart: s.breakStart,
+      breakEnd: s.breakEnd,
+      status: s.status,
+      totalBreakMinutes: s.totalBreakMinutes,
+      workedMinutes: computeSessionWorkedMinutes(s, new Date()),
+      breaks: (s.breaks ?? []).map((b: any) => ({
+        id: b.id,
+        start: b.start,
+        end: b.end,
+        duration: b.duration,
+        isAuto: b.isAuto,
+        reason: b.reason,
+      })),
+    }));
+
+    return ctx.send({ sessions: enriched });
   },
 };
 

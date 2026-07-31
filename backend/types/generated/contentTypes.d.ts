@@ -1657,6 +1657,7 @@ export interface PluginUsersPermissionsUser
       'oneToMany',
       'api::agent-device.agent-device'
     >;
+    agentRequired: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     alerts: Schema.Attribute.Relation<'oneToMany', 'api::alert.alert'>;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1664,13 +1665,21 @@ export interface PluginUsersPermissionsUser
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    deletedAt: Schema.Attribute.DateTime;
     email: Schema.Attribute.Email &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    employeeId: Schema.Attribute.String;
+    employmentStatus: Schema.Attribute.Enumeration<
+      ['active', 'suspended', 'terminated']
+    > &
+      Schema.Attribute.DefaultTo<'active'>;
+    expectedDailyHours: Schema.Attribute.Decimal;
     fullName: Schema.Attribute.String & Schema.Attribute.Required;
     isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    jobTitle: Schema.Attribute.String;
     leaderOf: Schema.Attribute.Relation<'oneToMany', 'api::team.team'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -1691,6 +1700,7 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    phone: Schema.Attribute.String;
     projects: Schema.Attribute.Relation<'manyToMany', 'api::project.project'>;
     projectTimeAllocations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1708,6 +1718,7 @@ export interface PluginUsersPermissionsUser
       'api::screenshot-analysis.screenshot-analysis'
     >;
     sessions: Schema.Attribute.Relation<'oneToMany', 'api::session.session'>;
+    startDate: Schema.Attribute.Date;
     team: Schema.Attribute.Relation<'manyToOne', 'api::team.team'>;
     timeEntries: Schema.Attribute.Relation<
       'oneToMany',
