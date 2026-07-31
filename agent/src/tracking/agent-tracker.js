@@ -1,13 +1,14 @@
 const { uIOhook, UiohookKey } = require('uiohook-napi');
+const config = require('../config/config');
 
 // ── Thresholds ──────────────────────────────────────────────────────
-// Production thresholds.  Idle detection is informational only; the
-// auto-break threshold is the authoritative 15-minute cutoff.
-// const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 min — considered "idle"
-const IDLE_THRESHOLD_MS = 1* 60 * 1000; // 5 min — considered "idle" test with 1 min time 
-// const AUTO_BREAK_THRESHOLD_MS = 15 * 60 * 1000; // 15 min — auto-break starts
-const AUTO_BREAK_THRESHOLD_MS = 2 * 60 * 1000; // 2 min — auto-break starts
-const CHECK_INTERVAL_MS = 30 * 1000; // poll every 30 s
+// Production thresholds from config (defaults: 5 min idle detection,
+// 15 min auto-break cutoff, 30 s check interval). Overridable in
+// agent/.env — AGENT_IDLE_THRESHOLD_MS / AGENT_AUTO_BREAK_THRESHOLD_MS /
+// AGENT_CHECK_INTERVAL_MS.
+const IDLE_THRESHOLD_MS = config.tracking.idleThresholdMs;
+const AUTO_BREAK_THRESHOLD_MS = config.tracking.autoBreakThresholdMs;
+const CHECK_INTERVAL_MS = config.tracking.checkIntervalMs;
 
 // ── Internal state ──────────────────────────────────────────────────
 let lastActivityAt = Date.now();

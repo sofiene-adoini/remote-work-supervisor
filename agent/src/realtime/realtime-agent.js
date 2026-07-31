@@ -1,6 +1,7 @@
 const { io } = require('socket.io-client');
+const config = require('../config/config');
 
-const SERVER_URL = 'http://localhost:1337';
+const SERVER_URL = config.server.serverUrl;
 
 let socket = null;
 let currentToken = null;

@@ -30,8 +30,9 @@ const secureStorage = new SecureStorage({
   userDataPath: app.getPath('userData'),
 });
 
-const HEARTBEAT_MS = 5 * 60 * 1000;
-const REFRESH_MS = 55 * 60 * 1000;
+const config = require('./src/config/config');
+const HEARTBEAT_MS = config.heartbeat.intervalMs;
+const REFRESH_MS = config.heartbeat.refreshMs;
 
 // ── Device info (static — computed once) ───────────────────────────
 
@@ -286,6 +287,7 @@ function createWindow() {
     height: 520,
     resizable: false,
     title: 'The Guardian',
+    icon: path.join(__dirname, 'logo.png'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

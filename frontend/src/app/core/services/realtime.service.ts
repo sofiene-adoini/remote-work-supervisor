@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Subject } from 'rxjs';
 import { AuthService } from '../../features/auth/services/auth.service';
-import { API_BASE_URL } from '../constants/app.constants';
+import { SOCKET_URL } from '../constants/app.constants';
 
 export interface SessionStatusEvent {
   userId: number;
@@ -100,7 +100,7 @@ export class RealtimeService {
     const token = this.auth.token;
     if (!token) return;
 
-    this.socket = io(API_BASE_URL, {
+    this.socket = io(SOCKET_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
     });

@@ -7,6 +7,7 @@ import {
   LucideCrown, LucideBriefcase, LucideSearch, LucideX,
   LucideChevronDown, LucideCoffee, LucideTrendingUp,
   LucideCalendar, LucideBarChart3, LucideAlertTriangle,
+  LucideUser,
 } from '@lucide/angular';
 import { WorkspaceService } from '../services/workspace.service';
 import { ProjectsService } from '../services/projects.service';
@@ -26,7 +27,7 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
     LucideUsers, LucideStopCircle, LucideClock, LucideArrowRight,
     LucideCrown, LucideBriefcase, LucideSearch, LucideX,
     LucideChevronDown, LucideCoffee, LucideTrendingUp,
-  LucideCalendar, LucideBarChart3,
+    LucideCalendar, LucideBarChart3, LucideAlertTriangle, LucideUser,
   ],
   template: `
     <div class="page-container">
@@ -231,16 +232,16 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
           </div>
 
           <!-- ============================================ -->
-          <!-- SECTION 3: TEAM PROJECTS                     -->
+          <!-- SECTION 3: MY PROJECTS                       -->
           <!-- ============================================ -->
           <div class="section">
-            <h2 class="section-title">Team Projects <span class="count-badge">{{ filteredProjects().length }}</span></h2>
+            <h2 class="section-title">My Projects <span class="count-badge">{{ filteredProjects().length }}</span></h2>
 
             @if (team.projects.length === 0) {
               <div class="empty-state-sm">
                 <svg lucideBriefcase class="empty-icon-sm" aria-hidden="true"></svg>
-                <p class="empty-title-sm">Your team currently has no assigned projects</p>
-                <p class="empty-sub-sm">Projects will appear here once assigned to your team.</p>
+                <p class="empty-title-sm">You have no assigned projects yet</p>
+                <p class="empty-sub-sm">Projects assigned to you or your team will appear here.</p>
               </div>
             } @else {
               @if (filteredProjects().length === 0) {
@@ -255,6 +256,15 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
                     <div class="project-card" [style.--card-color]="project.color || '#0b4a5a'" (click)="openDrawer(project)" role="button" tabindex="0" (keydown.enter)="openDrawer(project)">
                       <div class="card-top-row">
                         <span class="card-status-badge" [class]="'st-' + project.status">{{ statusLabel(project.status) }}</span>
+                        <span class="assign-badge" [class.is-individual]="project.assignmentType === 'individual'">
+                          @if (project.assignmentType === 'individual') {
+                            <svg lucideUser class="icon-xs" aria-hidden="true"></svg>
+                            Individual
+                          } @else {
+                            <svg lucideUsers class="icon-xs" aria-hidden="true"></svg>
+                            Team
+                          }
+                        </span>
                         @if (project.priority) {
                           <span class="card-prio-badge" [class]="'prio-' + project.priority">{{ project.priority }}</span>
                         }
@@ -334,6 +344,9 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
                           <div class="contr-project">
                             <span class="contr-dot" [style.background]="project.color || '#0b4a5a'"></span>
                             <span>{{ project.name }}</span>
+                            <span class="assign-badge assign-badge-sm" [class.is-individual]="project.assignmentType === 'individual'">
+                              {{ project.assignmentType === 'individual' ? 'Individual' : 'Team' }}
+                            </span>
                           </div>
                         </td>
                         <td class="contr-value">{{ project.myContribution.hoursTotal }}h</td>
@@ -375,6 +388,15 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
               <div class="drawer-section">
                 <div class="drawer-badges">
                   <span class="card-status-badge" [class]="'st-' + p.status">{{ statusLabel(p.status) }}</span>
+                  <span class="assign-badge" [class.is-individual]="p.assignmentType === 'individual'">
+                    @if (p.assignmentType === 'individual') {
+                      <svg lucideUser class="icon-xs" aria-hidden="true"></svg>
+                      Individual
+                    } @else {
+                      <svg lucideUsers class="icon-xs" aria-hidden="true"></svg>
+                      Team
+                    }
+                  </span>
                   @if (p.priority) {
                     <span class="card-prio-badge" [class]="'prio-' + p.priority">{{ p.priority }}</span>
                   }
@@ -732,6 +754,14 @@ type SortKey = 'name' | 'deadline' | 'progress' | 'priority' | 'estimated' | 'wo
       &.prio-high { background: #fef3e2; color: #92610a; }
       &.prio-critical { background: #fde8e8; color: #b91c1c; }
     }
+    .assign-badge {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      font-size: 0.625rem; font-weight: 600; padding: 0.1875rem 0.5rem;
+      border-radius: 999px; text-transform: capitalize; white-space: nowrap;
+      background: #e8f1fb; color: #2b3a67;
+      &.is-individual { background: #f3e8fd; color: #6b21a8; }
+    }
+    .assign-badge-sm { padding: 0.125rem 0.5rem; }
     .card-title { margin: 0 0 0.375rem; font-size: 1rem; font-weight: 600; color: var(--rws-text); }
     .card-desc {
       margin: 0 0 0.75rem; font-size: 0.8125rem; color: var(--rws-text-muted);

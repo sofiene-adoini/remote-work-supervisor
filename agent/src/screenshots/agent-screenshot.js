@@ -1,9 +1,11 @@
 const screenshot = require('screenshot-desktop');
 const { PNG } = require('pngjs');
 const { createScreenshotAnalysis } = require('../api/api');
+const config = require('../config/config');
 
-// const CAPTURE_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
-const CAPTURE_INTERVAL_MS = 30 * 1000; //for testing :30 sec
+// Production capture interval from config (default 10 minutes).
+// Overridable in agent/.env — AGENT_CAPTURE_INTERVAL_MS.
+const CAPTURE_INTERVAL_MS = config.screenshots.captureIntervalMs;
 const LOW_DIFF_THRESHOLD = 0.02;
 const SUSPICIOUS_CONSECUTIVE_COUNT = 3;
 

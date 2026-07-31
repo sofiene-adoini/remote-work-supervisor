@@ -33,9 +33,9 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
         },
       },
       sessions: {
-        accessTokenLifespan: 60 * 60,
-        maxRefreshTokenLifespan: 7 * 24 * 60 * 60,
-        idleRefreshTokenLifespan: 7 * 24 * 60 * 60,
+        accessTokenLifespan: env.int('SESSION_ACCESS_TOKEN_LIFESPAN', 60 * 60),
+        maxRefreshTokenLifespan: env.int('SESSION_MAX_REFRESH_LIFESPAN', 7 * 24 * 60 * 60),
+        idleRefreshTokenLifespan: env.int('SESSION_IDLE_REFRESH_LIFESPAN', 7 * 24 * 60 * 60),
         httpOnly: true,
         cookie: {
           sameSite: 'lax',
@@ -44,8 +44,8 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
         },
       },
       ratelimit: {
-        interval: 60_000,
-        max: 5,
+        interval: env.int('SESSION_RATELIMIT_INTERVAL', 60_000),
+        max: env.int('SESSION_RATELIMIT_MAX', 5),
       },
     },
   },
@@ -55,7 +55,7 @@ const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin =>
       providerOptions: {
         host: env('SMTP_HOST', 'smtp.gmail.com'),
         port: env.int('SMTP_PORT', 587),
-        secure: false,
+        secure: env.bool('SMTP_SECURE', false),
         auth: {
           user: env('SMTP_USER'),
           pass: env('SMTP_PASS'),

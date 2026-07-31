@@ -3,16 +3,41 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   LucideMonitor, LucideSmartphone, LucideTrash2, LucideRefreshCw,
-  LucideCopy, LucideCheck, LucideClock, LucideShield, LucidePenLine,
+  LucideCopy, LucideCheck, LucideClock, LucideShield, LucidePenLine, LucideDownload,
 } from '@lucide/angular';
 import { AgentDevicesService } from '../services/agent-devices.service';
 import { AgentDevice } from '../models/agent-device.models';
+import { AGENT_DOWNLOAD_URL, AGENT_VERSION } from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-desktop-agent',
-  imports: [DatePipe, FormsModule, LucideMonitor, LucideSmartphone, LucideTrash2, LucideRefreshCw, LucideCopy, LucideCheck, LucideClock, LucideShield, LucidePenLine],
+  imports: [DatePipe, FormsModule, LucideMonitor, LucideSmartphone, LucideTrash2, LucideRefreshCw, LucideCopy, LucideCheck, LucideClock, LucideShield, LucidePenLine, LucideDownload],
   template: `
     <div class="page-container">
+      <!-- Download Desktop Agent Section -->
+      <div class="section-card">
+        <div class="section-header">
+          <div>
+            <h2 class="section-title">Desktop Agent</h2>
+            <p class="section-desc">Download and install the desktop agent, then pair it with your account.</p>
+          </div>
+          <span class="version-badge">v{{ agentVersion }}</span>
+        </div>
+        <div class="download-row">
+          <div class="download-info">
+            <span class="download-label">Latest Version</span>
+            <span class="download-value">v{{ agentVersion }}</span>
+            <span class="download-note">Windows 10/11 · 64-bit</span>
+          </div>
+          @if (agentDownloadUrl) {
+            <a class="btn-primary download-btn" [href]="agentDownloadUrl" download>
+              <svg lucideDownload class="icon-sm"></svg>
+              Download Desktop Agent
+            </a>
+          }
+        </div>
+      </div>
+
       <!-- Pairing Code Section -->
       <div class="section-card">
         <div class="section-header">
@@ -175,6 +200,37 @@ import { AgentDevice } from '../models/agent-device.models';
       font-size: 0.8125rem;
       color: var(--rws-text-muted);
     }
+
+    .version-badge {
+      padding: 0.25rem 0.625rem;
+      border-radius: 999px;
+      background: #e8f8f6;
+      color: #167d72;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--rws-font-mono);
+    }
+
+    .download-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding-top: 0.5rem;
+    }
+
+    .download-info {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .download-label { font-size: 0.75rem; font-weight: 500; color: var(--rws-text-muted); }
+    .download-value { font-size: 0.875rem; font-weight: 600; color: var(--rws-text); font-family: var(--rws-font-mono); }
+    .download-note { font-size: 0.75rem; color: var(--rws-text-muted); }
+    .download-btn { text-decoration: none; }
 
     .code-display {
       display: flex;
@@ -424,6 +480,9 @@ export class DesktopAgentComponent implements OnInit {
   protected readonly generatingCode = signal(false);
   protected readonly copied = signal(false);
   protected readonly editingDeviceId = signal<number | null>(null);
+
+  protected readonly agentVersion = AGENT_VERSION;
+  protected readonly agentDownloadUrl = AGENT_DOWNLOAD_URL;
 
   private countdownInterval: any;
 

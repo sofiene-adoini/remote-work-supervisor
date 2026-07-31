@@ -5,7 +5,7 @@ import { emitSessionUpdate, startContinuousWorkCheck } from './api/session/contr
 import { OvertimeDetectionService } from './api/overtime-declaration/services/overtime-detection.service';
 
 const USER_UID = 'plugin::users-permissions.user';
-const OFFLINE_GRACE_MS = 15_000;
+const OFFLINE_GRACE_MS = Number(process.env.OFFLINE_GRACE_MS) || 15_000;
 
 export default {
   register(/* { strapi }: { strapi: Core.Strapi } */) {},
