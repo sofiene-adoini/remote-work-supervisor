@@ -212,6 +212,7 @@ export interface WorkspaceProject {
   estimatedHours: number | null;
   expectedEnd: string | null;
   color: string | null;
+  assignmentType: 'team' | 'individual';
   totalHours: number;
   manager: { id: number; fullName: string } | null;
   progress: number | null;

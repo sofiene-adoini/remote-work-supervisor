@@ -28,3 +28,19 @@ build-errors3.txt
 
 # Agent test files
 agent/test-*.js
+
+# Electron / packaging
+agent/electron-*.log
+agent/device-credentials.json
+agent/build/
+release/
+
+# Built agent installer copied into the frontend static assets
+frontend/public/agent/
+
+# Local overrides
+*.local
+npm-debug.log*
+
+# Tool state
+.agents/

@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:1337/api';
+const config = require('../config/config');
+
+const API_BASE_URL = config.server.apiBaseUrl;
 
 let authToken = null;
 

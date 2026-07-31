@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight,
   LucideClock, LucideAlertTriangle, LucideCheckCircle, LucideSend,
+  LucideDownload, LucideMonitor,
 } from '@lucide/angular';
 import { TodaysStatusComponent } from '../components/todays-status.component';
 import { TimeEntriesService } from '../services/time-entries.service';
@@ -13,6 +14,7 @@ import { OvertimeService } from '../services/overtime.service';
 import { ProjectsService } from '../services/projects.service';
 import { Alert, DailyStats, WeeklyStats, OvertimeDeclaration } from '../models/employee.models';
 import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetectedEvent, AllocationChangedEvent } from '../../../core/services/realtime.service';
+import { AGENT_VERSION, AGENT_DOWNLOAD_URL } from '../../../core/constants/app.constants';
 
 @Component({
   selector: 'app-employee-dashboard',
@@ -20,6 +22,7 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetect
     RouterLink, DatePipe, DecimalPipe, TitleCasePipe,
     LucideFolderOpen, LucideChartBar, LucideBell, LucideArrowRight,
     LucideClock, LucideAlertTriangle, LucideCheckCircle,
+    LucideDownload, LucideMonitor,
     TodaysStatusComponent,
   ],
   template: `
@@ -56,6 +59,40 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetect
           [breakStartedAt]="breakStartedAt()"
         />
       }
+
+      <!-- Desktop Agent Download -->
+      <div class="card grid-full agent-card">
+        <div class="agent-info">
+          <div class="agent-icon-wrap">
+            <svg lucideMonitor class="agent-icon" aria-hidden="true"></svg>
+          </div>
+          <div class="agent-text">
+            <h2 class="card-title">Desktop Agent</h2>
+            <p class="agent-sub">Monitor your activity securely from this desktop app.</p>
+            <div class="agent-versions">
+              <span class="agent-version-item">
+                <span class="agent-version-label">Version</span>
+                <span class="agent-version-value">v{{ agentVersion }}</span>
+              </span>
+              <span class="agent-version-item">
+                <span class="agent-version-label">Latest Version</span>
+                <span class="agent-version-value">v{{ agentVersion }}</span>
+              </span>
+            </div>
+          </div>
+        </div>
+        @if (agentDownloadUrl) {
+          <a class="agent-download-btn" [href]="agentDownloadUrl" download>
+            <svg lucideDownload class="icon-sm"></svg>
+            Download Desktop Agent
+          </a>
+        } @else {
+          <a class="agent-download-btn" routerLink="/employee/desktop-agent">
+            <svg lucideDownload class="icon-sm"></svg>
+            Download Desktop Agent
+          </a>
+        }
+      </div>
 
       <!-- Policy-Aware Daily Progress -->
       @if (dailyStats()) {
@@ -321,6 +358,71 @@ import { RealtimeService, AlertCreatedEvent, SessionUpdatedEvent, OvertimeDetect
       &:hover { text-decoration: underline; }
       &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; border-radius: 4px; }
     }
+
+    /* ── Desktop Agent card ──────────────────────────────────── */
+    .agent-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      background: linear-gradient(180deg, #fff, #fbfbfa);
+    }
+
+    .agent-info { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+
+    .agent-icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #e8f8f6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .agent-icon { width: 24px; height: 24px; color: var(--rws-accent); }
+
+    .agent-text { min-width: 0; }
+
+    .agent-sub { margin: 0.25rem 0 0.5rem; font-size: 0.8125rem; color: var(--rws-text-muted); }
+
+    .agent-versions { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+
+    .agent-version-item { display: flex; align-items: center; gap: 0.375rem; }
+
+    .agent-version-label { font-size: 0.75rem; color: var(--rws-text-muted); font-weight: 500; }
+
+    .agent-version-value {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--rws-text);
+      font-family: var(--rws-font-mono);
+    }
+
+    .agent-download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem;
+      border: none;
+      border-radius: var(--rws-radius);
+      background: var(--rws-primary);
+      color: #fff;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      flex-shrink: 0;
+      transition: background 150ms ease, opacity 150ms ease;
+
+      &:hover { background: var(--rws-accent-strong); }
+      &:focus-visible { outline: 3px solid var(--rws-focus-ring); outline-offset: 2px; }
+    }
+
+    .icon-sm { width: 16px; height: 16px; }
 
     /* ── Attendance Badge ───────────────────────────────────── */
     .attendance-badge {
@@ -677,6 +779,8 @@ export class EmployeeDashboardComponent implements OnInit, OnDestroy {
   protected readonly currentProject = signal<{ id: number; name: string } | null>(null);
   protected readonly breakStartedAt = signal<string | null>(null);
   protected readonly statusLoading = signal(true);
+  protected readonly agentVersion = AGENT_VERSION;
+  protected readonly agentDownloadUrl = AGENT_DOWNLOAD_URL;
 
   protected readonly dailyStats = signal<DailyStats | null>(null);
   protected readonly weeklyStats = signal<WeeklyStats | null>(null);

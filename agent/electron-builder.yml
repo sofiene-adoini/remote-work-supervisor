@@ -1,0 +1,44 @@
+appId: com.assas.remote-work-supervisor
+productName: Remote Work Supervisor Agent
+copyright: Copyright © 2026 Assas
+
+directories:
+  output: release
+  buildResources: assets
+
+files:
+  - main.js
+  - preload.js
+  - index.html
+  - logo.png
+  - src/**/*
+  - package.json
+  - "!test-*.js"
+  - "!electron-*.log"
+  - "!.env"
+
+asar: true
+asarUnpack:
+  - "node_modules/keytar/**/*"
+  - "node_modules/uiohook-napi/**/*"
+  - "node_modules/screenshot-desktop/**/*"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Remote Work Supervisor Agent
+
+# keytar (N-API v3) and uiohook-napi (N-API) ship ABI-stable prebuilds that
+# load in Electron as-is; skip the node-gyp source rebuild (no VS toolchain
+# required and it fails without one).
+npmRebuild: false

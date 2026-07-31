@@ -5,10 +5,10 @@ const DEVICE_UID = 'api::agent-device.agent-device';
 const CODE_UID = 'api::pairing-code.pairing-code';
 const USER_UID = 'plugin::users-permissions.user';
 
-const TRUST_DURATION_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
-const CODE_DURATION_SEC = 60;
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 5;
+const TRUST_DURATION_MS = (Number(process.env.AGENT_TRUST_DURATION_DAYS) || 90) * 24 * 60 * 60 * 1000;
+const CODE_DURATION_SEC = Number(process.env.AGENT_PAIR_CODE_TTL_SECONDS) || 60;
+const RATE_LIMIT_WINDOW_MS = Number(process.env.AGENT_PAIR_RATE_LIMIT_WINDOW_MS) || 60 * 1000;
+const RATE_LIMIT_MAX = Number(process.env.AGENT_PAIR_RATE_LIMIT_MAX) || 5;
 
 const rateLimitMap = new Map<number, { count: number; windowStart: number }>();
 

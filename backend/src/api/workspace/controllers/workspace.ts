@@ -1,6 +1,7 @@
 import type { Context } from 'koa';
 const USER_UID = 'plugin::users-permissions.user';
 const TEAM_UID = 'api::team.team';
+const PROJECT_UID = 'api::project.project';
 const SESSION_UID = 'api::session.session';
 const ALLOC_UID = 'api::project-time-allocation.project-time-allocation';
 
@@ -92,8 +93,23 @@ export default {
       };
     });
 
+    const teamProjectIds = (team.projects ?? []).map((p: any) => (typeof p === 'object' ? p.id : p));
+    const teamProjectsFull = await strapi.db.query(PROJECT_UID).findMany({
+      where: { id: { $in: teamProjectIds } },
+    });
+    const directProjects = await strapi.db.query(PROJECT_UID).findMany({
+      where: { users: { id: userId } },
+    });
+    const mergedProjects = new Map<number, any>();
+    for (const p of [...teamProjectsFull, ...directProjects]) {
+      if (!mergedProjects.has(p.id)) mergedProjects.set(p.id, p);
+    }
+    const allProjects = [...mergedProjects.values()];
+
+    const teamProjectIdSet = new Set(teamProjectsFull.map((p: any) => p.id));
+
     const projects = await Promise.all(
-      (team.projects ?? []).map(async (project: any) => {
+      allProjects.map(async (project: any) => {
         const projectId = typeof project === 'object' ? project.id : project;
 
         const myAllocs = await strapi.db.query(ALLOC_UID).findMany({
@@ -128,6 +144,7 @@ export default {
           estimatedHours: project.estimatedHours ?? null,
           expectedEnd: project.expectedEnd ?? null,
           color: project.color ?? null,
+          assignmentType: teamProjectIdSet.has(projectId) ? 'team' : 'individual',
           totalHours: Math.round((totalMinutes / 60) * 10) / 10,
           manager: project.manager ? { id: project.manager.id, fullName: project.manager.fullName } : null,
           progress: project.estimatedHours
@@ -168,7 +185,7 @@ export default {
             : null,
           memberCount: (team.users ?? []).length,
           members,
-          projectCount: (team.projects ?? []).length,
+          projectCount: projects.length,
           projects: sortedProjects,
           createdAt: team.createdAt ?? null,
         },
