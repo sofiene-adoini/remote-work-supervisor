@@ -54,6 +54,49 @@
   box-shadow: 0 0 0 3px var(--rws-focus-ring);
 }
 
+.password-wrap {
+  position: relative;
+}
+
+.password-wrap input {
+  padding-right: 2.75rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--rws-text-muted);
+  cursor: pointer;
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+
+  &:hover {
+    color: var(--rws-text);
+    background: var(--rws-bg);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--rws-focus-ring);
+    outline-offset: -2px;
+  }
+}
+
+.pw-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
 .auth-error,
 .auth-status {
   margin: 0;

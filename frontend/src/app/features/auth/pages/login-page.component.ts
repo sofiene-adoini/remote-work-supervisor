@@ -3,13 +3,14 @@ import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { LucideEye, LucideEyeOff } from '@lucide/angular';
 import { AuthService } from '../services/auth.service';
 import { NotificationService } from '../../../core/services/notification.service';
 import { AutofocusDirective } from '../../../shared/directives/autofocus.directive';
 
 @Component({
   selector: 'app-login-page',
-  imports: [CommonModule, ReactiveFormsModule, RouterLink, AutofocusDirective],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, AutofocusDirective, LucideEye, LucideEyeOff],
   template: `
     <form class="auth-form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <div class="auth-copy">
@@ -34,13 +35,28 @@ import { AutofocusDirective } from '../../../shared/directives/autofocus.directi
 
       <div class="auth-field">
         <label for="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          formControlName="password"
-          autocomplete="current-password"
-          aria-describedby="password-error"
-        />
+        <div class="password-wrap">
+          <input
+            id="password"
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="current-password"
+            aria-describedby="password-error"
+          />
+          <button
+            class="password-toggle"
+            type="button"
+            (click)="showPassword = !showPassword"
+            [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            [attr.aria-pressed]="showPassword"
+          >
+            @if (showPassword) {
+              <svg lucideEyeOff class="pw-icon" aria-hidden="true"></svg>
+            } @else {
+              <svg lucideEye class="pw-icon" aria-hidden="true"></svg>
+            }
+          </button>
+        </div>
         @if (showError('password')) {
           <p id="password-error" class="auth-error" role="alert">Enter your password.</p>
         }
@@ -71,6 +87,7 @@ export class LoginPageComponent {
 
   protected loading = false;
   protected submitError = '';
+  protected showPassword = false;
 
   protected readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
