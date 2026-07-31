@@ -19,8 +19,13 @@ export const HR_ROUTES: Routes = [
     loadComponent: () => import('./pages/hr-team-detail.component').then((m) => m.HrTeamDetailComponent),
   },
   {
+    path: 'employees',
+    loadComponent: () => import('./pages/hr-employees.component').then((m) => m.HrEmployeesComponent),
+  },
+  {
     path: 'members',
-    loadComponent: () => import('./pages/hr-team-members.component').then((m) => m.HrTeamMembersComponent),
+    redirectTo: 'employees',
+    pathMatch: 'full',
   },
   {
     path: 'projects',

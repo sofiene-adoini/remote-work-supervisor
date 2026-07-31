@@ -93,7 +93,7 @@ export class DashboardLayoutComponent implements OnInit {
     { label: 'Alerts', icon: LucideBell, path: '/employee/alerts', roles: ['Employee'] },
     { label: 'Desktop Agent', icon: LucideMonitor, path: '/employee/desktop-agent', roles: ['Employee'] },
     { label: 'Dashboard', icon: LucideLayoutDashboard, path: '/hr/dashboard', roles: ['HR', 'Admin'] },
-    { label: 'Members', icon: LucideUser, path: '/hr/members', roles: ['HR', 'Admin'] },
+    { label: 'Employees', icon: LucideUser, path: '/hr/employees', roles: ['HR', 'Admin'] },
     { label: 'Teams', icon: LucideUsersRound, path: '/hr/teams', roles: ['HR', 'Admin'] },
     { label: 'Projects', icon: LucideFolderOpen, path: '/hr/projects', roles: ['HR', 'Admin'] },
     { label: 'Overtime', icon: LucideChartBar, path: '/hr/overtime', roles: ['HR', 'Admin'] },

@@ -21,6 +21,13 @@ export interface EmployeeQuery {
   teamId?: number;
   sortBy?: string;
   sortDir?: string;
+  employment?: string;
+  agentStatus?: string;
+  roleId?: number;
+  projectId?: number;
+  joinedFrom?: string;
+  joinedTo?: string;
+  includeDeleted?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })

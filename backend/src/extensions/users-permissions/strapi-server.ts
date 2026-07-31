@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import type { Core } from '@strapi/strapi';
+import { buildResetPasswordEmail, buildWelcomeEmail } from '../../utils/email-templates';
 
 type StrapiPlugin = {
   contentTypes: Record<string, { schema: { attributes: Record<string, unknown> } }>;
@@ -39,6 +40,13 @@ const publicProfile = (user: any) => ({
       }
     : null,
   isActive: user.isActive,
+  employeeId: user.employeeId ?? null,
+  phone: user.phone ?? null,
+  jobTitle: user.jobTitle ?? null,
+  employmentStatus: user.employmentStatus ?? 'active',
+  startDate: user.startDate ?? null,
+  expectedDailyHours: user.expectedDailyHours ?? null,
+  agentRequired: user.agentRequired ?? true,
 });
 
 const makeTemporaryPassword = () => `${crypto.randomBytes(10).toString('base64url')}7A`;
@@ -61,6 +69,42 @@ export default (plugin: StrapiPlugin) => {
   plugin.contentTypes.user.schema.attributes.isActive = {
     type: 'boolean',
     default: true,
+  };
+
+  plugin.contentTypes.user.schema.attributes.employeeId = {
+    type: 'string',
+  };
+
+  plugin.contentTypes.user.schema.attributes.phone = {
+    type: 'string',
+  };
+
+  plugin.contentTypes.user.schema.attributes.jobTitle = {
+    type: 'string',
+  };
+
+  plugin.contentTypes.user.schema.attributes.employmentStatus = {
+    type: 'enumeration',
+    enum: ['active', 'suspended', 'terminated'],
+    default: 'active',
+  };
+
+  plugin.contentTypes.user.schema.attributes.startDate = {
+    type: 'date',
+  };
+
+  plugin.contentTypes.user.schema.attributes.expectedDailyHours = {
+    type: 'decimal',
+    default: null,
+  };
+
+  plugin.contentTypes.user.schema.attributes.agentRequired = {
+    type: 'boolean',
+    default: true,
+  };
+
+  plugin.contentTypes.user.schema.attributes.deletedAt = {
+    type: 'datetime',
   };
 
   ///////
@@ -180,62 +224,11 @@ plugin.contentTypes.user.schema.attributes.leaderOf = {
             from: process.env.SMTP_FROM || 'noreply@assas.app',
             subject: 'Reset your Assas password',
             text: `Click the link to reset your password: ${resetUrl}`,
-            html: `
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1">
-              </head>
-              <body style="margin:0;padding:0;background-color:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f5f7;min-height:100vh;">
-                  <tr>
-                    <td align="center" style="padding:40px 16px;">
-                      <table width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;">
-                        <tr>
-                          <td align="center" style="padding:0 0 32px;">
-                            <span style="font-size:24px;font-weight:800;color:#1e293b;letter-spacing:-0.03em;">Assas</span>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="background-color:#ffffff;border-radius:12px;padding:40px 36px;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 1px 2px rgba(0,0,0,0.06);">
-                            <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e293b;">Reset your password</h1>
-                            <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#64748b;">
-                              You requested a password reset for your Assas account. Click the button below to set a new password.
-                            </p>
-                            <table cellpadding="0" cellspacing="0" style="margin:0 0 24px;">
-                              <tr>
-                                <td align="center" style="background-color:#2563eb;border-radius:8px;padding:12px 32px;">
-                                  <a href="${resetUrl}" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
-                                    Reset password
-                                  </a>
-                                </td>
-                              </tr>
-                            </table>
-                            <p style="margin:0 0 8px;font-size:14px;line-height:1.5;color:#94a3b8;">
-                              Or copy this link into your browser:
-                            </p>
-                            <p style="margin:0 0 24px;font-size:13px;line-height:1.5;color:#64748b;word-break:break-all;">
-                              <a href="${resetUrl}" style="color:#2563eb;">${resetUrl}</a>
-                            </p>
-                            <hr style="border:none;border-top:1px solid #e2e8f0;margin:0 0 24px;">
-                            <p style="margin:0;font-size:13px;line-height:1.5;color:#94a3b8;">
-                              If you didn't request this, you can safely ignore this email. Your password will remain unchanged.
-                            </p>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td align="center" style="padding:24px 0 0;">
-                            <p style="margin:0;font-size:12px;color:#94a3b8;">Assas — Remote Work Supervisor</p>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </body>
-              </html>
-            `.trim(),
+            html: buildResetPasswordEmail({
+              resetUrl,
+              intro: 'You requested a password reset for your Assas account. Click the button below to set a new password.',
+              note: "If you didn't request this, you can safely ignore this email. Your password will remain unchanged.",
+            }),
           });
           strapiInstance.log.info(`[auth] Reset email sent to ${email}`);
         } catch (err: any) {
@@ -311,7 +304,11 @@ plugin.contentTypes.user.schema.attributes.leaderOf = {
       },
 
       async invite(ctx: any) {
-        const { email, fullName, roleId, teamId } = ctx.request.body ?? {};
+        const {
+          email, fullName, roleId, teamId,
+          phone, jobTitle, employeeId, startDate, expectedDailyHours,
+          agentRequired, employmentStatus, password, sendWelcomeEmail,
+        } = ctx.request.body ?? {};
 
         if (typeof email !== 'string' || typeof fullName !== 'string' || !roleId) {
           return ctx.badRequest('email, fullName, and roleId are required.');
@@ -323,8 +320,20 @@ plugin.contentTypes.user.schema.attributes.leaderOf = {
           where: { email: normalizedEmail },
         });
 
-        if (existing) {
+        // Soft-deleted accounts no longer "occupy" their email — they can be
+        // re-invited (restored) below instead of blocking the invite with a 409.
+        if (existing && !existing.deletedAt) {
           return ctx.conflict('A user with that email already exists.');
+        }
+
+        let employeeIdCollision: { id: number; deletedAt: string | null } | null = null;
+        if (employeeId) {
+          employeeIdCollision = await strapiInstance.db.query(USER_UID).findOne({
+            where: { employeeId: String(employeeId).trim() },
+          });
+          if (employeeIdCollision && !employeeIdCollision.deletedAt) {
+            return ctx.conflict('That employee ID is already assigned.');
+          }
         }
 
         // Resolve the requested role and enforce an allowlist to prevent privilege
@@ -372,43 +381,135 @@ plugin.contentTypes.user.schema.attributes.leaderOf = {
           }
         }
 
-        const temporaryPassword = makeTemporaryPassword();
-
-        // Defense-in-depth: assert the generated temp password satisfies the same
+        // A compliant password is either supplied by the inviter (HR/Admin) or
+        // generated as a temporary password. Either way it must satisfy the same
         // policy enforced by the plugin (`config/plugins.ts` validationRules.password).
-        if (!PASSWORD_PATTERN.test(temporaryPassword)) {
-          strapiInstance.log.error('[auth invite] generated temporary password failed policy check');
-          return ctx.internalServerError('Could not generate a compliant temporary password. Retry the invite.');
+        let effectivePassword: string;
+        let temporaryPassword: string | null = null;
+
+        if (typeof password === 'string' && password.length > 0) {
+          if (!PASSWORD_PATTERN.test(password)) {
+            return ctx.badRequest('Password must be at least 10 characters and contain at least one number.');
+          }
+          effectivePassword = password;
+        } else {
+          temporaryPassword = makeTemporaryPassword();
+          if (!PASSWORD_PATTERN.test(temporaryPassword)) {
+            strapiInstance.log.error('[auth invite] generated temporary password failed policy check');
+            return ctx.internalServerError('Could not generate a compliant temporary password. Retry the invite.');
+          }
+          effectivePassword = temporaryPassword;
         }
 
         const resetPasswordToken = crypto.randomBytes(32).toString('hex');
 
-        const user = await strapiInstance.plugin('users-permissions').service('user').add({
+        // Employee IDs are auto-generated on the backend when HR does not supply
+        // one (the Add/Edit forms no longer expose the field). Collisions are
+        // retried; the timestamp fallback is effectively collision-free.
+        const makeEmployeeId = async (): Promise<string> => {
+          for (let attempt = 0; attempt < 12; attempt++) {
+            const candidate = `EMP-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+            const clash = await strapiInstance.db.query(USER_UID).findOne({
+              where: { employeeId: candidate },
+            });
+            if (!clash) return candidate;
+          }
+          return `EMP-${Date.now().toString(36).toUpperCase()}`;
+        };
+
+        const userService = () => strapiInstance.plugin('users-permissions').service('user');
+        const userData = {
           username: normalizedEmail,
           email: normalizedEmail,
-          password: temporaryPassword,
-          provider: 'local',
-          confirmed: true,
-          blocked: false,
+          password: effectivePassword,
           fullName,
           isActive: true,
+          blocked: false,
+          confirmed: true,
           role: targetRole.id,
           team: teamId || null,
+          employeeId: employeeId ? String(employeeId).trim() : await makeEmployeeId(),
+          phone: phone?.trim() || null,
+          jobTitle: jobTitle?.trim() || null,
+          startDate: startDate || null,
+          expectedDailyHours: expectedDailyHours != null && Number(expectedDailyHours) > 0 ? Number(expectedDailyHours) : null,
+          agentRequired: agentRequired === undefined ? true : !!agentRequired,
+          employmentStatus: employmentStatus || 'active',
           resetPasswordToken,
-        });
+        };
 
-        strapiInstance.log.info(
-          `[auth invite] ${fullName} <${email}> invited — password-reset token generated`
-        );
+        let user;
+        if (existing && existing.deletedAt) {
+          // Re-invite: the email column is unique, so resurrect the soft-deleted
+          // record instead of creating a duplicate. Account history (sessions,
+          // breaks, alerts) is preserved and the account is reactivated.
+          // `deletedAt` must be cleared via the raw query layer: the Document
+          // Service used by userService().edit() does not apply null values, so
+          // it would otherwise leave the account hidden from every list.
+          if (employeeIdCollision && employeeIdCollision.id !== existing.id) {
+            await strapiInstance.db.query(USER_UID).update({
+              where: { id: employeeIdCollision.id },
+              data: { employeeId: null },
+            });
+          }
+          const hashedPassword = (await userService().ensureHashedPasswords({ password: effectivePassword })).password;
+          user = await strapiInstance.db.query(USER_UID).update({
+            where: { id: existing.id },
+            data: { ...userData, password: hashedPassword, deletedAt: null },
+          });
+          strapiInstance.log.info(
+            `[auth invite] ${fullName} <${email}> re-invited — restored soft-deleted account #${existing.id}`
+          );
+        } else {
+          // A soft-deleted account may still hold the requested employee ID.
+          // Free it so a brand-new employee can be created with the same ID.
+          if (employeeIdCollision && employeeIdCollision.deletedAt) {
+            await strapiInstance.db.query(USER_UID).update({
+              where: { id: employeeIdCollision.id },
+              data: { employeeId: null },
+            });
+          }
+          user = await userService().add({
+            ...userData,
+            provider: 'local',
+          });
+          strapiInstance.log.info(
+            `[auth invite] ${fullName} <${email}> invited — password-reset token generated`
+          );
+        }
 
         const invitedUser = await strapiInstance.db.query(USER_UID).findOne({
           where: { id: user.id },
           populate: ['role', 'team'],
         });
 
+        // Best-effort welcome email with a password-set link. Falls back to the
+        // reset token being returned in the response (and a server log) so the
+        // inviter can still relay credentials when email is unavailable.
+        if (sendWelcomeEmail !== false) {
+          const frontendUrl = (process.env.CORS_ORIGIN || 'http://localhost:4200').split(',')[0].trim();
+          const setPasswordUrl = `${frontendUrl}/set-initial-password?code=${resetPasswordToken}`;
+          try {
+            await strapiInstance.plugin('email').service('email').send({
+              to: invitedUser.email,
+              from: process.env.SMTP_FROM || 'noreply@assas.app',
+              subject: 'Welcome to Assas — set up your account',
+              text: `Your account has been created. Set your password here: ${setPasswordUrl}`,
+              html: buildWelcomeEmail(fullName, setPasswordUrl),
+            });
+            strapiInstance.log.info(`[auth invite] Welcome email sent to ${email}`);
+          } catch (err: any) {
+            strapiInstance.log.warn(`[auth invite] Failed to send welcome email: ${err.message}`);
+            strapiInstance.log.info(`[auth invite] Set-password link for ${email}: ${setPasswordUrl}`);
+          }
+        }
+
         return ctx.created({
           user: publicProfile(invitedUser),
           inviteToken: resetPasswordToken,
+          // Only surface the plaintext temporary password when the welcome email
+          // was NOT sent (the inviter must relay it manually in that case).
+          temporaryPassword: sendWelcomeEmail === false ? temporaryPassword : null,
         });
       },
     };
