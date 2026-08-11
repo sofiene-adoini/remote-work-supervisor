@@ -6,10 +6,11 @@
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --win",
-    "test": "node test-auth.js && node test-tracker.js && node test-screenshot-analysis.js",
+    "test": "node test-auth.js && node test-tracker.js && node test-screenshot-analysis.js && node test-screenshot-pipeline.js",
     "test:auth": "node test-auth.js",
     "test:tracker": "node test-tracker.js",
-    "test:screenshot": "node test-screenshot-analysis.js"
+    "test:screenshot": "node test-screenshot-analysis.js",
+    "test:screenshot-pipeline": "node test-screenshot-pipeline.js"
   },
   "keywords": [],
   "author": "Assas",

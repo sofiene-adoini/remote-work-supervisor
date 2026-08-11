@@ -34,6 +34,14 @@ const config = require('./src/config/config');
 const HEARTBEAT_MS = config.heartbeat.intervalMs;
 const REFRESH_MS = config.heartbeat.refreshMs;
 
+// ── Startup configuration log (helps diagnose env overrides) ─────────
+console.log(`[config] env=${process.env.AGENT_ENV || '(default)'}`);
+console.log(`[config] idleThresholdMs=${config.tracking.idleThresholdMs}`);
+console.log(`[config] autoBreakThresholdMs=${config.tracking.autoBreakThresholdMs}`);
+console.log(`[config] checkIntervalMs=${config.tracking.checkIntervalMs}`);
+console.log(`[config] captureIntervalMs=${config.screenshots.captureIntervalMs}`);
+console.log(`[config] apiBaseUrl=${config.server.apiBaseUrl}`);
+
 // ── Device info (static — computed once) ───────────────────────────
 
 function getDeviceInfo() {
@@ -52,7 +60,7 @@ async function handleAutoBreakStart() {
     await startBreak('auto-idle');
     setSessionState({ status: 'break' });
     tracker.setStatus('break');
-    screenshot.setStatus('break');
+    screenshot.setStatus('break', { automatic: true });
     notifyRenderer('session-update', getSessionState());
   } catch (err) {
     console.error('[agent] auto-break-start API failed:', err.message);
@@ -385,7 +393,7 @@ ipcMain.handle('start-break', async (_event, reason) => {
 
     setSessionState({ status: 'break' });
     tracker.setStatus('break');
-    screenshot.setStatus('break');
+    screenshot.setStatus('break', { automatic: false });
 
     return { ok: true, session: result.session };
   } catch (err) {
