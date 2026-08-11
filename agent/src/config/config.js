@@ -1,8 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 
-function loadDotEnv() {
-  const envFile = path.join(__dirname, '..', '..', '.env');
+function loadDotEnv(fileName) {
+  const envFile = path.join(__dirname, '..', '..', fileName);
   const values = {};
   try {
     const content = fs.readFileSync(envFile, 'utf8');
@@ -11,7 +11,11 @@ function loadDotEnv() {
       if (!trimmed || trimmed.startsWith('#')) continue;
       const eq = trimmed.indexOf('=');
       if (eq === -1) continue;
-      values[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+      let rawValue = trimmed.slice(eq + 1);
+      // Strip trailing inline comments (" # ..."), matching dotenv behaviour.
+      const commentAt = rawValue.indexOf(' #');
+      if (commentAt !== -1) rawValue = rawValue.slice(0, commentAt);
+      values[trimmed.slice(0, eq).trim()] = rawValue.trim();
     }
   } catch {
     // .env is optional — fall back to defaults
@@ -19,7 +23,14 @@ function loadDotEnv() {
   return values;
 }
 
-const dotenv = loadDotEnv();
+// Always load agent/.env; when AGENT_ENV is set, layer agent/.env.<AGENT_ENV>
+// (e.g. .env.test / .env.prod) on top so test/prod overrides never touch the
+// shared .env. Real process.env vars still win in resolve() below.
+const dotenv = loadDotEnv('.env');
+const envSuffix = (process.env.AGENT_ENV || '').trim();
+if (envSuffix) {
+  Object.assign(dotenv, loadDotEnv(`.env.${envSuffix}`));
+}
 
 function resolve(key, fallback) {
   const raw = process.env[key] ?? dotenv[key];

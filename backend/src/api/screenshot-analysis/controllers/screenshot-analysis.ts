@@ -3,6 +3,7 @@ import { createAndEmit } from '../../alert/services/notification.service';
 
 const SA_UID = 'api::screenshot-analysis.screenshot-analysis';
 const SESSION_UID = 'api::session.session';
+const ALERT_UID = 'api::alert.alert';
 
 export default {
   async find(ctx: Context) {
@@ -179,13 +180,37 @@ export default {
     } as any);
 
     if (isSuspicious) {
-      createAndEmit({
-        type: 'suspicious_activity',
-        message: 'Suspicious screenshot pattern detected — consecutive low-diff captures.',
-        severity: 'critical',
-        userId,
-        sessionId: activeSession.id,
-      }).catch((err) => strapi.log.error(`[Notification] suspicious_activity alert failed: ${err.message}`));
+      // Defense-in-depth: one suspicious_activity alert per continuous
+      // suspicious period. The agent now submits isSuspicious=true only once
+      // per period, but guard against retries / reconnects / legacy agents:
+      // only alert when the previous period has demonstrably ended, i.e. a
+      // 'normal' analysis record for this session is newer than the last
+      // suspicious_activity alert (that record is the period-ending high-diff).
+      const [lastAlert, lastNormal] = await Promise.all([
+        strapi.db.query(ALERT_UID).findOne({
+          where: { type: 'suspicious_activity', user: userId, session: activeSession.id },
+          orderBy: { createdAt: 'desc' },
+        }),
+        strapi.db.query(SA_UID).findOne({
+          where: { session: activeSession.id, analysisStatus: 'normal' },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
+      const previousPeriodEnded =
+        !lastAlert || (lastNormal && new Date(lastNormal.createdAt) > new Date(lastAlert.createdAt));
+
+      if (previousPeriodEnded) {
+        createAndEmit({
+          type: 'suspicious_activity',
+          message: 'Suspicious screenshot pattern detected — consecutive low-diff captures.',
+          severity: 'critical',
+          userId,
+          sessionId: activeSession.id,
+        }).catch((err) => strapi.log.error(`[Notification] suspicious_activity alert failed: ${err.message}`));
+      } else {
+        strapi.log.warn(`[Notification] suppressed duplicate suspicious_activity for session ${activeSession.id} — suspicious period still open`);
+      }
     }
 
     return ctx.send({ record }, 201);
