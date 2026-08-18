@@ -294,7 +294,7 @@ function createWindow() {
     width: 520,
     height: 520,
     resizable: false,
-    title: 'The Guardian',
+    title: 'IO-Watch',
     icon: path.join(__dirname, 'logo.png'),
     webPreferences: {
       contextIsolation: true,

@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  appName: 'Assas',
+  appName: 'IO-Watch',
   appVersion: '1.0.0',
   apiBasePath: '/api',
   // Replace with the deployed API origin before shipping the production build.

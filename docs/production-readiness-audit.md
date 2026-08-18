@@ -38,14 +38,14 @@ Covers: hardcoded values, env-var coverage, repository hygiene, and packaging re
 - `src/app/core/constants/app.constants.ts` hardcodes:
   - `API_BASE_URL = 'http://localhost:1337'`
   - `API_BASE_PATH = '/api'`
-  - `APP_NAME = 'Assas'`
+  - `APP_NAME = 'IO-Watch'`
 - `proxy.conf.json` hardcodes `http://localhost:1337` (dev-only, fine to keep).
 - **No app version constant** anywhere in the frontend.
 
 ### Branding (currently hardcoded, acceptable for single-product)
-- `src/index.html` — `<title>Assas — The Guardian</title>`
-- `shared/layouts/dashboard-layout/dashboard-layout.component.html` — logo + `Assas`
-- `features/auth/pages/login-page.component.ts` — "Access your Assas dashboard."
+- `src/index.html` — `<title>IO-Watch</title>`
+- `shared/layouts/dashboard-layout/dashboard-layout.component.html` — logo + `IO-Watch`
+- `features/auth/pages/login-page.component.ts` — "Access your IO-Watch dashboard."
 - `styles/_design-tokens.scss` — comments only (cosmetic)
 
 ## 3. Desktop Agent (Electron, `agent/`)

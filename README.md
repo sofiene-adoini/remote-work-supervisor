@@ -1,11 +1,11 @@
-# Remote Work Supervisor — Assas
+# Remote Work Supervisor — IO-Watch
 
 A full-stack remote-work monitoring and productivity platform. Employees run a lightweight **desktop agent** that tracks work sessions, breaks, and project activity in real time; **HR/Admin** get a live operational dashboard to manage teams, projects, overtime, alerts, and trusted devices — all built on a modern, role-aware stack.
 
 ```
 ┌───────────────────────────┐        ┌──────────────────────────┐
 │  Desktop Agent (Electron) │        │  Angular Web App (SPA)   │
-│  The Guardian             │        │  Assas                   │
+│  The Guardian             │        │  IO-Watch                │
 │  - input/activity tracking│        │  Employee · HR · Admin   │
 │  - screenshot analysis    │        │  - dashboards            │
 │  - heartbeats / pairing   │        │  - projects / teams      │
@@ -201,7 +201,7 @@ npm start              # launches the Electron app
 npm run dist           # electron-builder → agent/release/*.exe
 ```
 
-Install the produced `Remote Work Supervisor Agent Setup 1.0.0.exe`, then:
+Install the produced `IO-Watch Setup 1.0.0.exe`, then:
 
 1. In the web app, open **Desktop Agent** (Employee) → **Generate Pairing Code**.
 2. In the agent window, enter the code and click **Pair**.
@@ -284,7 +284,7 @@ For local testing only, set short values in `agent/.env` (e.g. `AGENT_AUTO_BREAK
 
 ```powershell
 $env:AGENT_AUTO_BREAK_THRESHOLD_MS = "60000"
-& "Remote Work Supervisor Agent.exe"
+& "IO-Watch.exe"
 ```
 
 ---
@@ -389,4 +389,4 @@ See [`docs/auth-security-notes.md`](docs/auth-security-notes.md) for the full au
 
 ---
 
-© 2026 Assas. All rights reserved.
+© 2026 IO-Watch. All rights reserved.

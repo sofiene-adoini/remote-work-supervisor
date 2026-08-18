@@ -1,6 +1,6 @@
-appId: com.assas.remote-work-supervisor
-productName: Remote Work Supervisor Agent
-copyright: Copyright © 2026 Assas
+appId: com.io-watch.remote-work-supervisor
+productName: IO-Watch
+copyright: Copyright © 2026 IO-Watch
 
 directories:
   output: release
@@ -36,7 +36,7 @@ nsis:
   perMachine: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: Remote Work Supervisor Agent
+  shortcutName: IO-Watch
 
 # keytar (N-API v3) and uiohook-napi (N-API) ship ABI-stable prebuilds that
 # load in Electron as-is; skip the node-gyp source rebuild (no VS toolchain

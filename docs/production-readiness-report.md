@@ -52,7 +52,7 @@ timer env-configurable (documented in `agent/.env.example`):
 
 ## 6. Electron Builder packaging
 - New `agent/electron-builder.yml`: `productName: Remote Work Supervisor Agent`,
-  `appId: com.assas.remote-work-supervisor`, x64 NSIS assisted installer
+   `appId: com.io-watch.remote-work-supervisor`, x64 NSIS assisted installer
   (install-dir choice, desktop + start-menu shortcuts), `asar` with unpacked native
   modules, `assets/icon.ico` (multi-size 16–256 px generated from the logo).
 - `npmRebuild: false` — keytar (N-API v3) and uiohook-napi (N-API) ship ABI-stable
@@ -60,7 +60,7 @@ timer env-configurable (documented in `agent/.env.example`):
 
 ## 7. Installer output
 Built successfully:
-- `agent/release/Remote Work Supervisor Agent Setup 1.0.0.exe` (96 MB)
+- `agent/release/IO-Watch Setup 1.0.0.exe` (96 MB)
 - Verified `app.asar` contains `main.js`, `preload.js`, `src/api/api.js`,
   `src/config/config.js`; native modules unpacked under `app.asar.unpacked`.
 

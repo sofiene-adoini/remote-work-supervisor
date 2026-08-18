@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  appName: 'Assas',
+  appName: 'IO-Watch',
   appVersion: '1.0.0',
   apiBasePath: '/api',
   apiBaseUrl: 'http://localhost:1337',

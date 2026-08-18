@@ -1,7 +1,7 @@
 {
-  "name": "the-guardian",
+  "name": "io-watch",
   "version": "1.0.0",
-  "description": "The Guardian — Trusted Device Agent for Assas",
+  "description": "IO-Watch — Trusted Device Agent",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
@@ -13,7 +13,7 @@
     "test:screenshot-pipeline": "node test-screenshot-pipeline.js"
   },
   "keywords": [],
-  "author": "Assas",
+  "author": "IO-Watch",
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
